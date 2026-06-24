@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KomikZone – Baca Manga Manhwa Manhua Online</title>
+  <meta name="description" content="Baca manga, manhwa, manhua terlengkap. Update chapter terbaru setiap hari gratis!" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=20260624b" />
+</head>
+<body>
+
+  <!-- ========== NAVBAR ========== -->
+  <header class="navbar" id="navbar">
+    <div class="nav-wrap">
+      <a class="brand" href="#" data-nav="home">
+        <svg class="brand-logo" width="32" height="32" viewBox="0 0 32 32">
+          <rect width="32" height="32" rx="8" fill="url(#lg)"/>
+          <path d="M9 8h5v16H9V8zm7 0h7v4h-7V8zm0 6h7v4h-7v-4zm0 6h7v4h-7v-4z" fill="rgba(255,255,255,0.92)"/>
+          <defs>
+            <linearGradient id="lg" x1="0" y1="0" x2="32" y2="32">
+              <stop offset="0%" stop-color="#7c3aed"/>
+              <stop offset="100%" stop-color="#c026d3"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="brand-name">KomikZone</span>
+      </a>
+
+      <!-- Search bar – centred like Shinigami -->
+      <div class="nav-search" id="nav-search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="q" type="text" placeholder="Cari Komik" autocomplete="off"/>
+        <kbd>Ctrl</kbd><kbd>K</kbd>
+        <div class="search-drop" id="search-drop"></div>
+      </div>
+
+      <div class="nav-actions">
+        <button class="hamburger" id="hamburger">
+          <span/><span/><span/>
+        </button>
+      </div>
+    </div>
+
+    <!-- desktop nav tabs under searchbar row -->
+    <div class="nav-tabs" id="nav-tabs">
+      <a class="ntab active" data-nav="home">Home</a>
+      <a class="ntab" data-nav="explore">Explore</a>
+      <a class="ntab" data-nav="top">Top Komik</a>
+      <a class="ntab" data-nav="genre">Genre</a>
+      <a class="ntab" data-nav="allseries">All Series</a>
+    </div>
+  </header>
+
+  <!-- mobile menu -->
+  <nav class="mmenu" id="mmenu">
+    <a class="mlink active" data-nav="home">🏠 Home</a>
+    <a class="mlink" data-nav="explore">🔍 Explore</a>
+    <a class="mlink" data-nav="top">🏆 Top Komik</a>
+    <a class="mlink" data-nav="genre">🎭 Genre</a>
+    <a class="mlink" data-nav="allseries">📚 All Series</a>
+  </nav>
+
+  <!-- notice bar -->
+  <div class="notice-bar" id="notice-bar">
+    <span class="notice-label">Notice</span>
+    <span class="notice-text">Data dari <strong>KomikKita</strong> · Gratis tanpa login! 🇮🇩</span>
+    <button class="notice-close" id="notice-close">✕</button>
+  </div>
+
+  <!-- ========== MAIN ========== -->
+  <main id="main">
+
+    <!-- HOME -->
+    <div id="pg-home" class="pg active">
+
+      <!-- Featured Slider -->
+      <section class="featured" id="featured">
+        <div class="feat-slides" id="feat-slides"><!-- JS --></div>
+        <button class="feat-arrow left"  id="feat-prev">‹</button>
+        <button class="feat-arrow right" id="feat-next">›</button>
+        <div class="feat-dots" id="feat-dots"></div>
+      </section>
+
+      <!-- Terakhir Dibaca -->
+      <section class="home-blk" id="history-blk" style="display:none">
+        <div class="blk-head">
+          <h2 class="blk-title">🕐 Terakhir Dibaca</h2>
+          <button class="blk-more" id="clear-history" style="color:var(--txt3);font-size:.72rem">Hapus Semua</button>
+        </div>
+        <div class="history-row" id="history-row"><!-- JS --></div>
+      </section>
+
+      <!-- Update Terbaru (chapter-style list) -->
+      <section class="home-blk">
+        <div class="blk-head">
+          <h2 class="blk-title"><span class="live-dot"></span> Update Terbaru</h2>
+          <a class="blk-more" data-nav="explore" href="#">Semua</a>
+        </div>
+        <!-- 2-column chapter update list like Shinigami -->
+        <div class="update-grid" id="update-grid">
+          <div class="skel-list" id="update-skel">
+            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
+            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
+            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
+            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
+            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
+            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
+            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
+            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Popular / Hot -->
+      <section class="home-blk">
+        <div class="blk-head">
+          <h2 class="blk-title">🔥 Komik Populer</h2>
+          <a class="blk-more" data-nav="top" href="#">Semua</a>
+        </div>
+        <div class="card-grid" id="pop-grid">
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+        </div>
+      </section>
+
+      <!-- Manhwa Webtoon -->
+      <section class="home-blk">
+        <div class="blk-head">
+          <h2 class="blk-title">📱 Manhwa / Webtoon</h2>
+          <a class="blk-more" data-nav="genre" href="#">Lihat Genre</a>
+        </div>
+        <div class="card-grid" id="manhwa-grid">
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+        </div>
+      </section>
+
+      <!-- Manhua -->
+      <section class="home-blk">
+        <div class="blk-head">
+          <h2 class="blk-title">🐉 Manhua / Donghua</h2>
+          <a class="blk-more" data-nav="allseries" href="#">Lihat Semua</a>
+        </div>
+        <div class="card-grid" id="manhua-grid">
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- EXPLORE -->
+    <div id="pg-explore" class="pg">
+      <div class="pg-header">
+        <h1>🔍 Explore Komik</h1>
+        <p>Jelajahi semua manga, manhwa, dan manhua bahasa Indonesia dari KomikKita</p>
+        <div class="filt-row">
+          <button class="filt active" data-t="">Semua</button>
+          <button class="filt" data-t="Manga">Manga</button>
+          <button class="filt" data-t="Manhwa">Manhwa</button>
+          <button class="filt" data-t="Manhua">Manhua</button>
+        </div>
+        <div class="sort-row">
+          <span>Urutkan:</span>
+          <select id="exp-sort">
+            <option value="update">Terbaru</option>
+            <option value="popular">Terpopuler</option>
+            <option value="title">Judul A–Z</option>
+          </select>
+          <span style="margin-left:1rem">Status:</span>
+          <select id="exp-status">
+            <option value="">Semua</option>
+            <option value="Ongoing">Ongoing</option>
+            <option value="Completed">Selesai</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-grid wide" id="exp-grid"></div>
+      <div class="pager" id="exp-pager"></div>
+    </div>
+
+    <!-- TOP -->
+    <div id="pg-top" class="pg">
+      <div class="pg-header">
+        <h1>🏆 Top Komik</h1>
+        <p>Komik terpopuler di KomikKita, bahasa Indonesia lengkap!</p>
+        <div class="filt-row">
+          <button class="filt active" data-t="all">Semua</button>
+          <button class="filt" data-t="Manga">Manga</button>
+          <button class="filt" data-t="Manhwa">Manhwa</button>
+          <button class="filt" data-t="Manhua">Manhua</button>
+        </div>
+      </div>
+      <div class="card-grid wide" id="top-grid"></div>
+      <div class="pager" id="top-pager"></div>
+    </div>
+
+    <!-- GENRE -->
+    <div id="pg-genre" class="pg">
+      <div class="pg-header">
+        <h1>🎭 Genre Komik</h1>
+        <p>Pilih genre favorit kamu</p>
+      </div>
+      <div class="genre-grid" id="genre-grid"></div>
+      <div id="genre-result" style="display:none">
+        <div class="genre-res-head">
+          <button class="back-chip" id="genre-back">← Semua Genre</button>
+          <h2 id="genre-res-label"></h2>
+        </div>
+        <div class="card-grid wide" id="genre-manga-grid"></div>
+        <div class="pager" id="genre-pager"></div>
+      </div>
+    </div>
+
+    <!-- GENRE VIEW (hasil pilih genre) -->
+    <div id="pg-genreview" class="pg">
+      <div class="pg-header">
+        <h1 id="genre-view-title">Genre</h1>
+        <p>Komik berdasarkan genre pilihan</p>
+      </div>
+      <div class="card-grid wide" id="genre-view-grid"></div>
+      <div class="pager" id="genre-view-pager"></div>
+    </div>
+
+    <!-- ALL SERIES -->
+    <div id="pg-allseries" class="pg">
+      <div class="pg-header">
+        <h1>📚 All Series</h1>
+        <p>Semua komik tersedia di KomikKita, bahasa Indonesia!</p>
+        <div class="filt-row">
+          <button class="filt active" data-t="">Semua</button>
+          <button class="filt" data-t="manga">Manga</button>
+          <button class="filt" data-t="manhwa">Manhwa</button>
+          <button class="filt" data-t="manhua">Manhua</button>
+        </div>
+      </div>
+      <div class="card-grid wide" id="all-grid"></div>
+      <div class="pager" id="all-pager"></div>
+    </div>
+
+    <!-- DETAIL -->
+    <div id="pg-detail" class="pg">
+      <div id="detail-root"></div>
+    </div>
+
+    <!-- READER -->
+    <div id="pg-reader" class="pg">
+      <!-- Fullscreen reader toolbar -->
+      <div class="reader-bar" id="reader-bar">
+        <button class="r-back" id="r-back">← Kembali</button>
+        <div class="r-title" id="r-title">Memuat...</div>
+        <div class="r-controls">
+          <button class="r-btn" id="r-fit-toggle" title="Toggle lebar halaman">⇔ Lebar</button>
+          <button class="r-btn" id="r-prev-ch" title="Chapter sebelumnya">‹ Ch</button>
+          <span class="r-ch-info" id="r-ch-info"></span>
+          <button class="r-btn" id="r-next-ch" title="Chapter berikutnya">Ch ›</button>
+        </div>
+      </div>
+
+      <!-- Pages container -->
+      <div class="reader-wrap" id="reader-wrap">
+        <div class="reader-pages" id="reader-pages"></div>
+      </div>
+
+      <!-- Chapter nav floating bottom -->
+      <div class="reader-nav" id="reader-nav">
+        <button class="rnav-btn" id="rnav-prev">← Chapter Sebelumnya</button>
+        <button class="rnav-btn" id="rnav-next">Chapter Berikutnya →</button>
+      </div>
+    </div>
+
+    <!-- TEXT PAGE (Disclaimer, About, dll) -->
+    <div id="pg-page" class="pg">
+      <div class="pg-header">
+        <h1 id="text-page-title">...</h1>
+      </div>
+      <div class="text-page-content" id="text-page-content"></div>
+    </div>
+
+  </main>
+
+  <!-- Bottom Nav (Shinigami style) -->
+  <nav class="bnav">
+    <a class="bnav-i active" data-nav="home">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>Home</span>
+    </a>
+    <a class="bnav-i" data-nav="explore">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <span>Explore</span>
+    </a>
+    <a class="bnav-i" data-nav="top">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
+      <span>Top</span>
+    </a>
+    <a class="bnav-i" data-nav="genre">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Library</span>
+    </a>
+    <a class="bnav-i" data-nav="allseries">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+      <span>All Series</span>
+    </a>
+  </nav>
+
+  <!-- Footer -->
+  <footer class="site-footer" id="site-footer">
+    <div class="footer-inner">
+      <nav class="footer-links">
+        <a class="footer-link" href="#" onclick="event.preventDefault();showPage('disclaimer')">Disclaimer</a>
+        <a class="footer-link" href="#" onclick="event.preventDefault();showPage('privacy')">Privacy Policy</a>
+        <a class="footer-link" href="#" onclick="event.preventDefault();showPage('about')">About</a>
+        <a class="footer-link" href="#" onclick="event.preventDefault();showPage('kontak')">Kontak</a>
+        <a class="footer-link" href="https://github.com/DkGaming12/komikzone" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+      <p class="footer-copy">© 2025 <strong>KomikZone</strong> — Baca Manga, Manhwa &amp; Manhua Online Gratis</p>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+  <button class="btt" id="btt">↑</button>
+
+  <!-- Trakteer Popup -->
+  <div class="popup-overlay" id="trakteer-popup">
+    <div class="popup-box">
+      <button class="popup-close" id="popup-close">✕</button>
+      <div class="popup-icon">☕</div>
+      <h3 class="popup-title">Dukung KomikZone!</h3>
+      <p class="popup-desc">Suka baca komik di sini? Dukung kami dengan traktir kopi agar web ini terus update dan bebas iklan mengganggu!</p>
+      <a href="https://teer.id/komikzone" target="_blank" rel="noopener" class="popup-btn" id="popup-btn">
+        Dukung via Trakteer
+      </a>
+    </div>
+  </div>
+
+  <script>
+    // Inline helper so skeleton renders server-side style
+    function skel(n) {
+      return Array(n).fill(`<div class="skel-card"><div class="skel-img"></div><div class="skel-line" style="margin:.7rem .7rem .3rem"></div><div class="skel-line s" style="margin:0 .7rem .7rem"></div></div>`).join('');
+    }
+  </script>
+  <script src="app.js?v=20260624b"></script>
+</body>
+</html>
