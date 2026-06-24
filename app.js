@@ -137,7 +137,7 @@ function paginate(pagerId, curPage, total, fn) {
   if (!p) return;
   const pages = [];
   for (let i = 1; i <= Math.min(total, 20); i++) {
-    pages.push(`<button class="page-btn${i===curPage?' active':''}" onclick="(${fn.toString()})(${i})">${i}</button>`);
+    pages.push(`<button class="pg-btn${i===curPage?' on':''}" onclick="(${fn.toString()})(${i})">${i}</button>`);
   }
   p.innerHTML = pages.join('');
 }
@@ -217,11 +217,11 @@ async function loadHome() {
   // Manhwa / Manhua — load from explore
   const mhw = await api(`${PROXY}/api/list?type=Manhwa&order=popular&page=1`);
   const mhg = $('manhwa-grid');
-  if (mhg) { mhg.innerHTML = ''; (mhw?.items||[]).slice(0,8).forEach(m => mhg.appendChild(buildCard(m))); }
+  if (mhg) { mhg.innerHTML = ''; (mhw?.items||[]).slice(0,12).forEach(m => mhg.appendChild(buildCard(m))); }
 
   const mhu = await api(`${PROXY}/api/list?type=Manhua&order=popular&page=1`);
   const mug = $('manhua-grid');
-  if (mug) { mug.innerHTML = ''; (mhu?.items||[]).slice(0,8).forEach(m => mug.appendChild(buildCard(m))); }
+  if (mug) { mug.innerHTML = ''; (mhu?.items||[]).slice(0,12).forEach(m => mug.appendChild(buildCard(m))); }
 }
 
 /* ─────────────────────────────────────────────────────
