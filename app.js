@@ -16,12 +16,12 @@ async function api(url) {
     const d = await r.json();
     _apiCache.set(url, d);
     return d;
-  } catch(e) { console.warn('API err:', url, e); return null; }
+  } catch (e) { console.warn('API err:', url, e); return null; }
 }
 
 /* ── DOM helpers ── */
-const $  = id => document.getElementById(id);
-const $$ = s  => [...document.querySelectorAll(s)];
+const $ = id => document.getElementById(id);
+const $$ = s => [...document.querySelectorAll(s)];
 
 function showToast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.add('on');
@@ -29,7 +29,7 @@ function showToast(msg) {
 }
 
 /* ── State ── */
-let curPg  = 'home';
+let curPg = 'home';
 let prevPg = 'home';
 
 let expPage = 1, expSort = 'update', expType = '', expStatus = '';
@@ -41,26 +41,26 @@ let slideIdx = 0, slideN = 0, slideTimer = null;
 
 /* ── Genre list (from KomikKita) ── */
 const GENRES_DEFAULT = [
-  { name:'Action',      slug:'action',       icon:'⚔️' },
-  { name:'Adventure',   slug:'adventure',    icon:'🗺️' },
-  { name:'Comedy',      slug:'comedy',       icon:'😄' },
-  { name:'Drama',       slug:'drama',        icon:'🎭' },
-  { name:'Fantasy',     slug:'fantasy',      icon:'🧙' },
-  { name:'Horror',      slug:'horror',       icon:'👻' },
-  { name:'Mystery',     slug:'mystery',      icon:'🔍' },
-  { name:'Romance',     slug:'romance',      icon:'💕' },
-  { name:'Sci-Fi',      slug:'sci-fi',       icon:'🚀' },
-  { name:'Slice of Life',slug:'slice-of-life',icon:'🌸' },
-  { name:'Shounen',     slug:'shounen',      icon:'🔥' },
-  { name:'Seinen',      slug:'seinen',       icon:'🗡️' },
-  { name:'Josei',       slug:'josei',        icon:'💐' },
-  { name:'Shoujo',      slug:'shoujo',       icon:'🌷' },
-  { name:'Manhwa',      slug:'manhwa',       icon:'🇰🇷' },
-  { name:'Manhua',      slug:'manhua',       icon:'🇨🇳' },
-  { name:'Isekai',      slug:'isekai',       icon:'🌀' },
-  { name:'Martial Arts',slug:'martial-arts', icon:'🥋' },
-  { name:'Supernatural',slug:'supernatural', icon:'👁️' },
-  { name:'Psychological',slug:'psychological',icon:'🧠' },
+  { name: 'Action', slug: 'action', icon: '⚔️' },
+  { name: 'Adventure', slug: 'adventure', icon: '🗺️' },
+  { name: 'Comedy', slug: 'comedy', icon: '😄' },
+  { name: 'Drama', slug: 'drama', icon: '🎭' },
+  { name: 'Fantasy', slug: 'fantasy', icon: '🧙' },
+  { name: 'Horror', slug: 'horror', icon: '👻' },
+  { name: 'Mystery', slug: 'mystery', icon: '🔍' },
+  { name: 'Romance', slug: 'romance', icon: '💕' },
+  { name: 'Sci-Fi', slug: 'sci-fi', icon: '🚀' },
+  { name: 'Slice of Life', slug: 'slice-of-life', icon: '🌸' },
+  { name: 'Shounen', slug: 'shounen', icon: '🔥' },
+  { name: 'Seinen', slug: 'seinen', icon: '🗡️' },
+  { name: 'Josei', slug: 'josei', icon: '💐' },
+  { name: 'Shoujo', slug: 'shoujo', icon: '🌷' },
+  { name: 'Manhwa', slug: 'manhwa', icon: '🇰🇷' },
+  { name: 'Manhua', slug: 'manhua', icon: '🇨🇳' },
+  { name: 'Isekai', slug: 'isekai', icon: '🌀' },
+  { name: 'Martial Arts', slug: 'martial-arts', icon: '🥋' },
+  { name: 'Supernatural', slug: 'supernatural', icon: '👁️' },
+  { name: 'Psychological', slug: 'psychological', icon: '🧠' },
 ];
 
 /* ─────────────────────────────────────────────────────
@@ -71,20 +71,36 @@ function buildCard(m) {
   el.className = 'komik-card';
   el.onclick = () => openDetail(m.slug);
 
-  const typeLabel = m.type ? `<span class="kc-type tag t-${(m.type||'').toLowerCase()}">${m.type}</span>` : '';
-  const score     = m.score ? `<div class="kc-score">★ ${m.score}</div>` : '';
-  const latCh     = m.latestChapter ? `<div class="kc-vol">${m.latestChapter}</div>` : '';
+  const typeLabel = m.type ? `<span class="kc-type tag t-${(m.type || '').toLowerCase()}">${m.type}</span>` : '';
+  const score = m.score ? `<div class="kc-score">★ ${m.score}</div>` : '';
+  
+  // Build chapter badges (max 2) below title
+  let chaptersHtml = '';
+  if (m.chapters && m.chapters.length > 0) {
+    chaptersHtml = `<div class="kc-chapters">` + m.chapters.slice(0, 2).map(c => `
+      <div class="kc-ch" onclick="event.stopPropagation();openReader('${c.slug}','${(m.title || '').replace(/'/g, "\\'")}')">
+        <span class="kc-ch-num">${c.title || 'Chapter'}</span>
+        <span class="kc-ch-time">${c.date || ''}</span>
+      </div>`).join('') + `</div>`;
+  } else if (m.latestChapter) {
+    chaptersHtml = `<div class="kc-chapters">
+      <div class="kc-ch">
+        <span class="kc-ch-num">${m.latestChapter}</span>
+        <span class="kc-ch-time"></span>
+      </div>
+    </div>`;
+  }
 
   el.innerHTML = `
     <div class="kc-thumb">
-      <img class="kc-img" src="${m.img||''}" alt="${m.title||''}" loading="lazy"
-        onerror="this.src='';this.parentElement.innerHTML='<div class=no-img>📚<br>${(m.title||'').slice(0,12)}</div>'">
+      <img class="kc-img" src="${m.img || ''}" alt="${m.title || ''}" loading="lazy"
+        onerror="this.src='';this.parentElement.innerHTML='<div class=no-img>📚<br>${(m.title || '').slice(0, 12)}</div>'">
       ${typeLabel}${score}
       <div class="kc-ov"><div class="kc-play">▶</div></div>
     </div>
     <div class="kc-body">
-      <div class="kc-title">${m.title||'Tanpa Judul'}</div>
-      <div class="kc-foot">${latCh}</div>
+      <div class="kc-title">${m.title || 'Tanpa Judul'}</div>
+      ${chaptersHtml}
     </div>`;
   return el;
 }
@@ -93,19 +109,19 @@ function buildUpdateRow(m, i) {
   const el = document.createElement('div');
   el.className = 'update-row';
 
-  const typeLabel = m.type ? `<span class="up-type-badge t-${(m.type||'').toLowerCase()}">${m.type}</span>` : '';
-  const chapters  = (m.chapters||[]).slice(0,3).map(c => `
-    <div class="up-ch" onclick="event.stopPropagation();openReader('${c.slug}','${(m.title||'').replace(/'/g,"\\'")}')">
+  const typeLabel = m.type ? `<span class="up-type-badge t-${(m.type || '').toLowerCase()}">${m.type}</span>` : '';
+  const chapters = (m.chapters || []).slice(0, 3).map(c => `
+    <div class="up-ch" onclick="event.stopPropagation();openReader('${c.slug}','${(m.title || '').replace(/'/g, "\\'")}')">
       <span class="up-ch-num">${c.title}</span>
-      <span class="up-ch-time">${c.date||''}</span>
+      <span class="up-ch-time">${c.date || ''}</span>
     </div>`).join('');
 
   el.innerHTML = `
-    <img class="up-thumb" src="${m.img||''}" alt="${m.title||''}" loading="lazy"
+    <img class="up-thumb" src="${m.img || ''}" alt="${m.title || ''}" loading="lazy"
       onerror="this.src='';this.alt='📚'">
     <div class="up-info">
       ${typeLabel}
-      <div class="up-title">${m.title||''}</div>
+      <div class="up-title">${m.title || ''}</div>
       <div class="up-chapters">${chapters}</div>
     </div>`;
   el.onclick = () => openDetail(m.slug);
@@ -137,7 +153,7 @@ function paginate(pagerId, curPage, total, fn) {
   if (!p) return;
   const pages = [];
   for (let i = 1; i <= Math.min(total, 20); i++) {
-    pages.push(`<button class="pg-btn${i===curPage?' on':''}" onclick="(${fn.toString()})(${i})">${i}</button>`);
+    pages.push(`<button class="pg-btn${i === curPage ? ' on' : ''}" onclick="(${fn.toString()})(${i})">${i}</button>`);
   }
   p.innerHTML = pages.join('');
 }
@@ -146,20 +162,20 @@ function paginate(pagerId, curPage, total, fn) {
    SLIDER
 ───────────────────────────────────────────────────── */
 function initSlider(items) {
-  const sl  = $('feat-slides');
+  const sl = $('feat-slides');
   const dot = $('feat-dots');
   if (!sl || !items.length) return;
 
   slideN = items.length;
   sl.innerHTML = items.map((m, i) => `
     <div class="feat-slide" data-i="${i}" onclick="openDetail('${m.slug}')">
-      <div class="feat-bg" style="background-image:url('${m.img||''}')"></div>
+      <div class="feat-bg" style="background-image:url('${m.img || ''}')"></div>
       <div class="feat-overlay"></div>
       <div class="feat-body">
-        <img class="feat-cover" src="${m.img||''}" alt="${m.title||''}" loading="${i===0?'eager':'lazy'}">
+        <img class="feat-cover" src="${m.img || ''}" alt="${m.title || ''}" loading="${i === 0 ? 'eager' : 'lazy'}">
         <div class="feat-info">
-          <div class="feat-tags">${(m.genres||[]).slice(0,3).map(g=>`<span class="tag">${g}</span>`).join('')}</div>
-          <h2 class="feat-title">${m.title||''}</h2>
+          <div class="feat-tags">${(m.genres || []).slice(0, 3).map(g => `<span class="tag">${g}</span>`).join('')}</div>
+          <h2 class="feat-title">${m.title || ''}</h2>
           <div class="feat-btns">
             <button class="btn-primary" onclick="event.stopPropagation();openDetail('${m.slug}')">📖 Baca</button>
           </div>
@@ -168,7 +184,7 @@ function initSlider(items) {
     </div>`).join('');
 
   dot.innerHTML = items.map((_, i) =>
-    `<button class="fdot${i===0?' on':''}" onclick="goSlide(${i})"></button>`).join('');
+    `<button class="fdot${i === 0 ? ' on' : ''}" onclick="goSlide(${i})"></button>`).join('');
 
   clearInterval(slideTimer);
   slideIdx = 0;
@@ -188,6 +204,92 @@ $('feat-prev').addEventListener('click', () => goSlide((slideIdx - 1 + slideN) %
 $('feat-next').addEventListener('click', () => goSlide((slideIdx + 1) % slideN));
 
 /* ─────────────────────────────────────────────────────
+   REKOMENDASI SLIDER — state
+───────────────────────────────────────────────────── */
+let _rekoAll = [];       // full data for current filter
+let _rekoOffset = 0;     // current slide offset
+let _rekoPerPage = 4;    // cards shown at once
+let _rekoType = 'all';   // current filter
+
+function renderRekoSlider() {
+  const sl = $('reko-slider');
+  if (!sl) return;
+  const visible = _rekoAll.slice(_rekoOffset, _rekoOffset + _rekoPerPage);
+  sl.innerHTML = '';
+  if (!visible.length) {
+    sl.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--txt3);font-size:.85rem">Tidak ada data</div>';
+    return;
+  }
+  visible.forEach(m => sl.appendChild(buildCard(m)));
+}
+
+if ($('reko-prev')) $('reko-prev').addEventListener('click', () => {
+  if (_rekoOffset <= 0) return;
+  _rekoOffset -= _rekoPerPage;
+  if (_rekoOffset < 0) _rekoOffset = 0;
+  renderRekoSlider();
+});
+
+if ($('reko-next')) $('reko-next').addEventListener('click', () => {
+  if (_rekoOffset + _rekoPerPage >= _rekoAll.length) return;
+  _rekoOffset += _rekoPerPage;
+  renderRekoSlider();
+});
+
+// Rekomendasi filter tabs
+$$('#reko-blk .filt').forEach(btn => btn.addEventListener('click', async () => {
+  $$('#reko-blk .filt').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _rekoType = btn.dataset.reko;
+  _rekoOffset = 0;
+
+  const sl = $('reko-slider');
+  if (sl) sl.innerHTML = skel(4);
+
+  if (_rekoType === 'all') {
+    // Use home popular/featured
+    const d = await api(`${PROXY}/api/home`);
+    _rekoAll = [...(d?.featured || []), ...(d?.popular || [])];
+  } else {
+    const d = await api(`${PROXY}/api/list?type=${_rekoType}&order=popular&page=1`);
+    _rekoAll = d?.items || [];
+  }
+  // Deduplicate
+  const seen = new Set();
+  _rekoAll = _rekoAll.filter(m => { if (seen.has(m.slug)) return false; seen.add(m.slug); return true; });
+  renderRekoSlider();
+}));
+
+// Responsive: update cards per page
+function updateRekoPerPage() {
+  if (window.innerWidth <= 480) _rekoPerPage = 2;
+  else if (window.innerWidth <= 768) _rekoPerPage = 3;
+  else _rekoPerPage = 4;
+}
+window.addEventListener('resize', () => { updateRekoPerPage(); renderRekoSlider(); });
+
+/* ─────────────────────────────────────────────────────
+   UPDATE TERBARU — state (card grid + pagination)
+───────────────────────────────────────────────────── */
+let _updatePage = 1;
+
+async function loadUpdateTerbaru(pg = 1) {
+  _updatePage = pg;
+  gridLoading('update-grid');
+  
+  if (pg === 1) {
+    const homeData = await api(`${PROXY}/api/home`);
+    const listData = await api(`${PROXY}/api/list?page=1&order=update`);
+    renderCards('update-grid', homeData?.updates);
+    paginate('update-pager', pg, listData?.totalPages || 1, p => loadUpdateTerbaru(p));
+  } else {
+    const d = await api(`${PROXY}/api/list?page=${pg}&order=update`);
+    renderCards('update-grid', d?.items);
+    paginate('update-pager', pg, d?.totalPages || 1, p => loadUpdateTerbaru(p));
+  }
+}
+
+/* ─────────────────────────────────────────────────────
    HOME
 ───────────────────────────────────────────────────── */
 async function loadHome() {
@@ -197,12 +299,16 @@ async function loadHome() {
   // Featured slider
   if (d.featured?.length) initSlider(d.featured);
 
-  // Update terbaru (max 4)
-  const ug = $('update-grid');
-  if (ug) {
-    ug.innerHTML = '';
-    (d.updates || []).slice(0, 4).forEach((m, i) => ug.appendChild(buildUpdateRow(m, i)));
-  }
+  // Rekomendasi slider
+  updateRekoPerPage();
+  _rekoAll = [...(d.featured || []), ...(d.popular || [])];
+  const seen = new Set();
+  _rekoAll = _rekoAll.filter(m => { if (seen.has(m.slug)) return false; seen.add(m.slug); return true; });
+  _rekoOffset = 0;
+  renderRekoSlider();
+
+  // Update Terbaru (card grid + pagination)
+  await loadUpdateTerbaru(1);
 
   // Terakhir Dibaca
   renderHistory();
@@ -217,11 +323,11 @@ async function loadHome() {
   // Manhwa / Manhua — load from explore
   const mhw = await api(`${PROXY}/api/list?type=Manhwa&order=popular&page=1`);
   const mhg = $('manhwa-grid');
-  if (mhg) { mhg.innerHTML = ''; (mhw?.items||[]).slice(0,12).forEach(m => mhg.appendChild(buildCard(m))); }
+  if (mhg) { mhg.innerHTML = ''; (mhw?.items || []).slice(0, 12).forEach(m => mhg.appendChild(buildCard(m))); }
 
   const mhu = await api(`${PROXY}/api/list?type=Manhua&order=popular&page=1`);
   const mug = $('manhua-grid');
-  if (mug) { mug.innerHTML = ''; (mhu?.items||[]).slice(0,12).forEach(m => mug.appendChild(buildCard(m))); }
+  if (mug) { mug.innerHTML = ''; (mhu?.items || []).slice(0, 12).forEach(m => mug.appendChild(buildCard(m))); }
 }
 
 /* ─────────────────────────────────────────────────────
@@ -229,7 +335,7 @@ async function loadHome() {
 ───────────────────────────────────────────────────── */
 function getHistory() {
   try { return JSON.parse(localStorage.getItem('kz_history')) || []; }
-  catch(e) { return []; }
+  catch (e) { return []; }
 }
 
 function saveHistory(mangaSlug, title, img, chapterSlug, chapterTitle) {
@@ -250,16 +356,16 @@ function renderHistory() {
   const blk = $('history-blk');
   const row = $('history-row');
   if (!blk || !row) return;
-  
+
   if (!h.length) {
     blk.style.display = 'none';
     return;
   }
-  
+
   blk.style.display = '';
   row.innerHTML = h.map(x => `
-    <div class="hist-card" onclick="openReader('${x.chapterSlug}','${x.title.replace(/'/g,"\\'")}')">
-      <img class="hist-img" src="${x.img||''}" loading="lazy" onerror="this.src=''">
+    <div class="hist-card" onclick="openReader('${x.chapterSlug}','${x.title.replace(/'/g, "\\'")}')">
+      <img class="hist-img" src="${x.img || ''}" loading="lazy" onerror="this.src=''">
       <div class="hist-info">
         <div class="hist-title">${x.title}</div>
         <div class="hist-ch">${x.chapterTitle}</div>
@@ -278,11 +384,11 @@ async function loadExplore(pg = 1) {
   expPage = pg;
   gridLoading('exp-grid');
   let url = `${PROXY}/api/list?page=${pg}&order=${expSort}`;
-  if (expType)   url += `&type=${encodeURIComponent(expType)}`;
+  if (expType) url += `&type=${encodeURIComponent(expType)}`;
   if (expStatus) url += `&status=${encodeURIComponent(expStatus)}`;
   const d = await api(url);
   renderCards('exp-grid', d?.items);
-  paginate('exp-pager', pg, d?.totalPages||1, p => loadExplore(p));
+  paginate('exp-pager', pg, d?.totalPages || 1, p => loadExplore(p));
 }
 
 $$('#pg-explore .filt').forEach(b => b.addEventListener('click', () => {
@@ -302,7 +408,7 @@ async function loadTop(pg = 1) {
   if (topType) url += `&type=${encodeURIComponent(topType)}`;
   const d = await api(url);
   renderCards('top-grid', d?.items);
-  paginate('top-pager', pg, d?.totalPages||1, p => loadTop(p));
+  paginate('top-pager', pg, d?.totalPages || 1, p => loadTop(p));
 }
 
 $$('#pg-top .filt').forEach(b => b.addEventListener('click', () => {
@@ -318,7 +424,7 @@ async function loadAllSeries(pg = 1) {
   gridLoading('all-grid');
   const d = await api(`${PROXY}/api/list?page=${pg}&order=title`);
   renderCards('all-grid', d?.items);
-  paginate('all-pager', pg, d?.totalPages||1, p => loadAllSeries(p));
+  paginate('all-pager', pg, d?.totalPages || 1, p => loadAllSeries(p));
 }
 
 $$('#pg-allseries .filt').forEach(b => b.addEventListener('click', () => {
@@ -347,7 +453,7 @@ async function loadGenre(slug, name, pg = 1) {
   gridLoading('genre-view-grid');
   const d = await api(`${PROXY}/api/genre/${slug}?page=${pg}`);
   renderCards('genre-view-grid', d?.items);
-  paginate('genre-view-pager', pg, d?.totalPages||1, p => loadGenre(slug, name, p));
+  paginate('genre-view-pager', pg, d?.totalPages || 1, p => loadGenre(slug, name, p));
 }
 
 /* ─────────────────────────────────────────────────────
@@ -369,7 +475,7 @@ async function openDetail(slug) {
 
   const scCol = '#a855f7';
   const authors = d.author || '-';
-  const syn     = d.synopsis || 'Sinopsis tidak tersedia.';
+  const syn = d.synopsis || 'Sinopsis tidak tersedia.';
 
   root.innerHTML = `
     <button class="detail-back" onclick="navigate('${prevPg}')">← Kembali</button>
@@ -378,24 +484,24 @@ async function openDetail(slug) {
       <div class="d-bg" style="background-image:url('${d.img}')"></div>
       <div class="d-fog"></div>
       <div class="d-wrap">
-        <img class="d-cover" src="${d.img||''}" alt="${d.title}" loading="lazy"
+        <img class="d-cover" src="${d.img || ''}" alt="${d.title}" loading="lazy"
           onerror="this.src='';this.alt='No Image'">
         <div class="d-info">
           <h1 class="d-title">${d.title}</h1>
           ${d.altTitle ? `<div class="d-alt">${d.altTitle}</div>` : ''}
           <div class="d-tags">
-            ${d.type ? `<span class="tag t-${(d.type||'').toLowerCase()}">${d.type}</span>` : ''}
-            ${d.status ? `<span class="tag ${d.status.toLowerCase().includes('ongoing')?'t-on':'t-end'}">${d.status}</span>` : ''}
-            ${(d.genres||[]).slice(0,3).map(g=>`<span class="tag t-genre">${g}</span>`).join('')}
+            ${d.type ? `<span class="tag t-${(d.type || '').toLowerCase()}">${d.type}</span>` : ''}
+            ${d.status ? `<span class="tag ${d.status.toLowerCase().includes('ongoing') ? 't-on' : 't-end'}">${d.status}</span>` : ''}
+            ${(d.genres || []).slice(0, 3).map(g => `<span class="tag t-genre">${g}</span>`).join('')}
           </div>
           <div class="d-stats">
             ${d.score ? `<div class="d-stat"><div class="d-val sc" style="color:${scCol}">★ ${d.score}</div><div class="d-lbl-s">Score</div></div>` : ''}
-            ${(d.chapters||[]).length ? `<div class="d-stat"><div class="d-val">${d.chapters.length}</div><div class="d-lbl-s">Chapter</div></div>` : ''}
+            ${(d.chapters || []).length ? `<div class="d-stat"><div class="d-val">${d.chapters.length}</div><div class="d-lbl-s">Chapter</div></div>` : ''}
           </div>
           <div style="margin-top:12px">
             <button class="btn-primary" id="d-read-btn" onclick="startReadFirst()"
-              ${(d.chapters||[]).length ? '' : 'disabled style="opacity:.4"'}>
-              📖 ${(d.chapters||[]).length ? 'Baca Chapter Terbaru' : 'Tidak Ada Chapter'}
+              ${(d.chapters || []).length ? '' : 'disabled style="opacity:.4"'}>
+              📖 ${(d.chapters || []).length ? 'Baca Chapter Terbaru' : 'Tidak Ada Chapter'}
             </button>
           </div>
         </div>
@@ -405,18 +511,18 @@ async function openDetail(slug) {
     <div class="d-body">
       <div>
         <div class="d-synopsis"><h3>Sinopsis</h3><p>${syn}</p></div>
-        ${(d.genres||[]).length ? `
+        ${(d.genres || []).length ? `
         <div class="d-genre-tags">
-          ${d.genres.map(g=>`<span class="d-gtag"
-            onclick="loadGenre('${g.toLowerCase().replace(/\s+/g,'-')}','${g.replace(/'/g,"\\'")}',1)">${g}</span>`).join('')}
+          ${d.genres.map(g => `<span class="d-gtag"
+            onclick="loadGenre('${g.toLowerCase().replace(/\s+/g, '-')}','${g.replace(/'/g, "\\'")}',1)">${g}</span>`).join('')}
         </div>` : ''}
       </div>
       <div class="d-card">
         <h3>Informasi</h3>
-        ${dRow('Tipe',    d.type)}
-        ${dRow('Status',  d.status)}
-        ${dRow('Author',  d.author)}
-        ${dRow('Score',   d.score)}
+        ${dRow('Tipe', d.type)}
+        ${dRow('Status', d.status)}
+        ${dRow('Author', d.author)}
+        ${dRow('Score', d.score)}
       </div>
     </div>
 
@@ -432,8 +538,8 @@ async function openDetail(slug) {
   if (clist) clist.innerHTML = buildChapterList(d.chapters || [], slug);
 
   _curChapters = (d.chapters || []).map(c => ({ slug: c.slug, title: c.title, date: c.date }));
-  _curTitle    = d.title;
-  _curImg      = d.img;
+  _curTitle = d.title;
+  _curImg = d.img;
   _curMangaSlug = slug;
 }
 
@@ -452,10 +558,10 @@ function buildChapterList(chapters, mangaSlug) {
   const sorted = [...chapters].reverse();
 
   const renderItem = (c) => `
-    <div class="ch-item" onclick="openReader('${c.slug}','${(_curTitle||'').replace(/'/g,"\\'")}')">
-      <span class="ch-num">${c.title||'Chapter'}</span>
+    <div class="ch-item" onclick="openReader('${c.slug}','${(_curTitle || '').replace(/'/g, "\\'")}')">
+      <span class="ch-num">${c.title || 'Chapter'}</span>
       <span class="ch-title-txt"></span>
-      <span class="ch-date">${c.date||''}</span>
+      <span class="ch-date">${c.date || ''}</span>
       <button class="ch-read-btn">📖 Baca</button>
     </div>`;
 
@@ -470,7 +576,7 @@ function buildChapterList(chapters, mangaSlug) {
   // Build range tabs
   const tabs = Array.from({ length: totalRanges }, (_, i) => {
     const start = i * RANGE + 1;
-    const end   = Math.min((i + 1) * RANGE, sorted.length);
+    const end = Math.min((i + 1) * RANGE, sorted.length);
     const label = `Ch ${start}–${end}`;
     return `<button class="ch-range-btn${i === 0 ? ' active' : ''}" onclick="showChapterRange('${key}',${i})">${label}</button>`;
   }).join('');
@@ -499,10 +605,10 @@ function showChapterRange(key, idx) {
    READER
 ───────────────────────────────────────────────────── */
 let _curChapters = [];
-let _curTitle    = '';
-let _curImg      = '';
-let _curMangaSlug= '';
-let _rChIdx      = 0;
+let _curTitle = '';
+let _curImg = '';
+let _curMangaSlug = '';
+let _rChIdx = 0;
 let _chReadCount = parseInt(localStorage.getItem('kz_ch_read') || '0');
 
 function startReadFirst() {
@@ -525,12 +631,12 @@ async function openReader(chSlug, title) {
     try {
       const md = await api(`${PROXY}/api/manga/${encodeURIComponent(mangaSlugGuess)}`);
       if (md && md.chapters && md.chapters.length) {
-        _curChapters  = md.chapters.map(c => ({ slug: c.slug, title: c.title, date: c.date }));
-        _curTitle     = md.title || title || '';
-        _curImg       = md.img || '';
+        _curChapters = md.chapters.map(c => ({ slug: c.slug, title: c.title, date: c.date }));
+        _curTitle = md.title || title || '';
+        _curImg = md.img || '';
         _curMangaSlug = mangaSlugGuess;
       }
-    } catch(e) {
+    } catch (e) {
       console.warn('Could not fetch manga for chapter context:', e);
     }
   }
@@ -539,7 +645,7 @@ async function openReader(chSlug, title) {
   if (_rChIdx < 0) _rChIdx = 0;
 
   const ch = _curChapters[_rChIdx] || { slug: chSlug, title: 'Chapter' };
-  $('r-title').textContent   = `${title||_curTitle||''} — ${ch.title||'Chapter'}`;
+  $('r-title').textContent = `${title || _curTitle || ''} — ${ch.title || 'Chapter'}`;
   $('r-ch-info').textContent = _curChapters.length ? `${_rChIdx + 1} / ${_curChapters.length}` : '...';
 
   if (_curMangaSlug && ch.slug) {
@@ -572,8 +678,8 @@ async function openReader(chSlug, title) {
 
   pages.innerHTML = imgs.map((src, i) =>
     `<div class="r-page">
-      <img src="${src}" alt="Halaman ${i+1}" loading="${i < 3 ? 'eager' : 'lazy'}"
-        onerror="this.parentElement.innerHTML='<div style=padding:2rem;text-align:center;color:#555>Gagal memuat halaman ${i+1}</div>'">
+      <img src="${src}" alt="Halaman ${i + 1}" loading="${i < 3 ? 'eager' : 'lazy'}"
+        onerror="this.parentElement.innerHTML='<div style=padding:2rem;text-align:center;color:#555>Gagal memuat halaman ${i + 1}</div>'">
     </div>`
   ).join('');
 
@@ -583,11 +689,11 @@ async function openReader(chSlug, title) {
 
 function updateReaderNav() {
   const n = _curChapters.length;
-  $('r-ch-info').textContent  = `${_rChIdx + 1} / ${n}`;
-  $('r-prev-ch').disabled     = _rChIdx <= 0;
-  $('r-next-ch').disabled     = _rChIdx >= n - 1;
-  $('rnav-prev').disabled     = _rChIdx <= 0;
-  $('rnav-next').disabled     = _rChIdx >= n - 1;
+  $('r-ch-info').textContent = `${_rChIdx + 1} / ${n}`;
+  $('r-prev-ch').disabled = _rChIdx <= 0;
+  $('r-next-ch').disabled = _rChIdx >= n - 1;
+  $('rnav-prev').disabled = _rChIdx <= 0;
+  $('rnav-next').disabled = _rChIdx >= n - 1;
 }
 
 function goReaderChapter(delta) {
@@ -598,7 +704,7 @@ function goReaderChapter(delta) {
   openReader(ch.slug, _curTitle);
 }
 
-$('r-back').addEventListener('click',    () => navigate('detail'));
+$('r-back').addEventListener('click', () => navigate('detail'));
 $('r-prev-ch').addEventListener('click', () => goReaderChapter(-1));
 $('r-next-ch').addEventListener('click', () => goReaderChapter(+1));
 $('rnav-prev').addEventListener('click', () => goReaderChapter(-1));
@@ -654,7 +760,7 @@ async function doSearch(q) {
       ${m.img ? `<img class="sd-img" src="${m.img}" alt="${m.title}">` : '<div class="sd-img"></div>'}
       <div style="flex:1;min-width:0">
         <div class="sd-name">${m.title}</div>
-        <div class="sd-sub">${m.type||''}</div>
+        <div class="sd-sub">${m.type || ''}</div>
       </div>
       ${m.score ? `<div class="sd-sc">⭐ ${m.score}</div>` : ''}
     </div>`).join('');
@@ -715,10 +821,10 @@ function navigate(name) {
   window.scrollTo({ top: 0 });
   $('mmenu')?.classList.remove('open');
 
-  if (name === 'explore'   && !$('exp-grid').children.length)   loadExplore(1);
-  if (name === 'top'       && !$('top-grid').children.length)   loadTop(1);
-  if (name === 'allseries' && !$('all-grid').children.length)   loadAllSeries(1);
-  if (name === 'genre'     && !$('genre-grid').children.length) buildGenreTiles();
+  if (name === 'explore' && !$('exp-grid').children.length) loadExplore(1);
+  if (name === 'top' && !$('top-grid').children.length) loadTop(1);
+  if (name === 'allseries' && !$('all-grid').children.length) loadAllSeries(1);
+  if (name === 'genre' && !$('genre-grid').children.length) buildGenreTiles();
 }
 
 document.addEventListener('click', e => {
@@ -742,7 +848,7 @@ window.addEventListener('scroll', () => {
     $('btt').classList.remove('show');
   }
 });
-$('btt').addEventListener('click', () => window.scrollTo({ top:0, behavior:'smooth' }));
+$('btt').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
 /* ─────────────────────────────────────────────────────
    TRAKTEER POPUP
@@ -772,7 +878,7 @@ function initPopup() {
   initPopup();
   try {
     await loadHome();
-  } catch(err) {
+  } catch (err) {
     console.error('Init error:', err);
     showToast('Gagal memuat data. Coba refresh halaman.');
   }

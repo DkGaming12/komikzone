@@ -5,14 +5,17 @@
  */
 
 const express = require('express');
-const cors    = require('cors');
-const fetch   = require('node-fetch');
+const cors = require('cors');
+const fetch = require('node-fetch');
 const cheerio = require('cheerio');
 
-const app  = express();
+const path = require('path');
+
+const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
+app.use(express.static(path.join(__dirname)));
 
 /* ── helpers ─────────────────────────────────────────── */
 const BASE = 'https://komikkita.com';
@@ -50,7 +53,7 @@ function imgSrc($, el) {
 app.get('/api/home', async (req, res) => {
   try {
     const html = await getHTML(`${BASE}/home/`);
-    const $    = cheerio.load(html);
+    const $ = cheerio.load(html);
 
     // Featured slider - try multiple selector patterns
     const featured = [];
@@ -63,9 +66,9 @@ app.get('/api/home', async (req, res) => {
     ];
     for (const sel of featuredSelectors) {
       $(sel).each((_, el) => {
-        const title  = $(el).find('.tt, .bigor .tt').first().text().trim();
-        const href   = $(el).find('a').first().attr('href') || '';
-        const img    = imgSrc($, $(el).find('img').first());
+        const title = $(el).find('.tt, .bigor .tt').first().text().trim();
+        const href = $(el).find('a').first().attr('href') || '';
+        const img = imgSrc($, $(el).find('img').first());
         const genres = [];
         $(el).find('.ge-ul a, .genres-list a').each((_, g) => genres.push($(g).text().trim()));
         const slug = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
@@ -77,15 +80,15 @@ app.get('/api/home', async (req, res) => {
     // Latest updates list
     const updates = [];
     $('.listupd .uta').each((_, el) => {
-      const title    = $(el).find('.luf .imgu img').attr('title') || $(el).find('h4').text().trim();
-      const href     = $(el).find('a').first().attr('href') || '';
-      const img      = imgSrc($, $(el).find('img').first());
+      const title = $(el).find('.luf .imgu img').attr('title') || $(el).find('h4').text().trim();
+      const href = $(el).find('a').first().attr('href') || '';
+      const img = imgSrc($, $(el).find('img').first());
       const chapters = [];
       $(el).find('.luf ul li').each((_, li) => {
-        const chHref  = $(li).find('a').attr('href') || '';
+        const chHref = $(li).find('a').attr('href') || '';
         const chTitle = $(li).find('a').text().trim();
-        const chDate  = $(li).find('span.chapter-date').text().trim();
-        const chSlug  = chHref.replace(BASE + '/', '').replace(/\/$/, '');
+        const chDate = $(li).find('span').text().trim();
+        const chSlug = chHref.replace(BASE + '/', '').replace(/\/$/, '');
         if (chTitle) chapters.push({ title: chTitle, slug: chSlug, date: chDate });
       });
       const slug = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
@@ -95,10 +98,10 @@ app.get('/api/home', async (req, res) => {
     let popular = [];
     $('.postbody .pop-list .bsx, .widget_series .bsx, .bixbox.hothome .bsx').each((_, el) => {
       const title = $(el).find('.tt').first().text().trim();
-      const href  = $(el).find('a').first().attr('href') || '';
-      const img   = imgSrc($, $(el).find('img').first());
+      const href = $(el).find('a').first().attr('href') || '';
+      const img = imgSrc($, $(el).find('img').first());
       const score = $(el).find('.rating span, .numscore').text().trim();
-      const slug  = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
+      const slug = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
       if (title) popular.push({ title, slug, img, score });
     });
 
@@ -108,10 +111,10 @@ app.get('/api/home', async (req, res) => {
         const $p = cheerio.load(popHtml);
         $p('.listupd .bsx').slice(0, 10).each((_, el) => {
           const title = $p(el).find('.tt').first().text().trim();
-          const href  = $p(el).find('a').first().attr('href') || '';
-          const img   = imgSrc($p, $p(el).find('img').first());
+          const href = $p(el).find('a').first().attr('href') || '';
+          const img = imgSrc($p, $p(el).find('img').first());
           const score = $p(el).find('.rating span').text().trim();
-          const slug  = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
+          const slug = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
           if (title) popular.push({ title, slug, img, score });
         });
       } catch (e) {
@@ -137,23 +140,23 @@ app.get('/api/list', async (req, res) => {
   try {
     const { page = 1, order = 'update', type = '', status = '', genre = '' } = req.query;
     let url = `${BASE}/manga/?page=${page}&order=${order}`;
-    if (type)   url += `&type=${encodeURIComponent(type)}`;
+    if (type) url += `&type=${encodeURIComponent(type)}`;
     if (status) url += `&status=${encodeURIComponent(status)}`;
-    if (genre)  url += `&genre=${encodeURIComponent(genre)}`;
+    if (genre) url += `&genre=${encodeURIComponent(genre)}`;
 
     const html = await getHTML(url, 60_000);
-    const $    = cheerio.load(html);
+    const $ = cheerio.load(html);
 
     const items = [];
     $('.listupd .bsx').each((_, el) => {
-      const title  = $(el).find('.tt').first().text().trim();
-      const href   = $(el).find('a').first().attr('href') || '';
-      const img    = imgSrc($, $(el).find('img').first());
-      const score  = $(el).find('.rating span').text().trim();
-      const type_  = $(el).find('.type').text().trim();
-      const status_= $(el).find('.status').text().trim();
-      const latCh  = $(el).find('.epxs').text().trim();
-      const slug   = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
+      const title = $(el).find('.tt').first().text().trim();
+      const href = $(el).find('a').first().attr('href') || '';
+      const img = imgSrc($, $(el).find('img').first());
+      const score = $(el).find('.rating span').text().trim();
+      const type_ = $(el).find('.type').text().trim();
+      const status_ = $(el).find('.status').text().trim();
+      const latCh = $(el).find('.epxs').text().trim();
+      const slug = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
       if (title) items.push({ title, slug, img, score, type: type_, status: status_, latestChapter: latCh });
     });
 
@@ -173,18 +176,18 @@ app.get('/api/search', async (req, res) => {
     const { q = '' } = req.query;
     if (!q) return res.json({ items: [] });
 
-    const url  = `${BASE}/?s=${encodeURIComponent(q)}`;
+    const url = `${BASE}/?s=${encodeURIComponent(q)}`;
     const html = await getHTML(url, 60_000);
-    const $    = cheerio.load(html);
+    const $ = cheerio.load(html);
 
     const items = [];
     $('.listupd .bsx, .search-wrap .bsx').each((_, el) => {
-      const title  = $(el).find('.tt').first().text().trim();
-      const href   = $(el).find('a').first().attr('href') || '';
-      const img    = imgSrc($, $(el).find('img').first());
-      const score  = $(el).find('.rating span').text().trim();
-      const type_  = $(el).find('.type').text().trim();
-      const slug   = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
+      const title = $(el).find('.tt').first().text().trim();
+      const href = $(el).find('a').first().attr('href') || '';
+      const img = imgSrc($, $(el).find('img').first());
+      const score = $(el).find('.rating span').text().trim();
+      const type_ = $(el).find('.type').text().trim();
+      const slug = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
       if (title) items.push({ title, slug, img, score, type: type_ });
     });
 
@@ -198,28 +201,28 @@ app.get('/api/search', async (req, res) => {
 app.get('/api/manga/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
-    const url  = `${BASE}/manga/${slug}/`;
+    const url = `${BASE}/manga/${slug}/`;
     const html = await getHTML(url);
-    const $    = cheerio.load(html);
+    const $ = cheerio.load(html);
 
-    const title      = $('h1.entry-title, .seriestukon h1').first().text().trim();
-    const altTitle   = $('.seriestualt').text().trim();
-    const img        = imgSrc($, $('.thumb img, .sertothumb img, .thumbook img').first());
-    const synopsis   = $('.entry-content p, .synp p, .entry-content').first().text().trim();
-    const score      = $('.rating-num, .num').first().text().trim();
-    const status     = $('.tsinfo .imptdt:contains("Status") i, .infotable td:contains("Ongoing"), .infotable td:contains("Completed")').first().text().trim()
-                    || $('time').first().attr('datetime') || '';
-    const type_      = $('.tsinfo .imptdt:contains("Type") a, .infotable td:contains("Manga"), .infotable td:contains("Manhwa"), .infotable td:contains("Manhua")').first().text().trim();
+    const title = $('h1.entry-title, .seriestukon h1').first().text().trim();
+    const altTitle = $('.seriestualt').text().trim();
+    const img = imgSrc($, $('.thumb img, .sertothumb img, .thumbook img').first());
+    const synopsis = $('.entry-content p, .synp p, .entry-content').first().text().trim();
+    const score = $('.rating-num, .num').first().text().trim();
+    const status = $('.tsinfo .imptdt:contains("Status") i, .infotable td:contains("Ongoing"), .infotable td:contains("Completed")').first().text().trim()
+      || $('time').first().attr('datetime') || '';
+    const type_ = $('.tsinfo .imptdt:contains("Type") a, .infotable td:contains("Manga"), .infotable td:contains("Manhwa"), .infotable td:contains("Manhua")').first().text().trim();
     // Author might be in .infotable or .tsinfo
-    const author     = $('.tsinfo .imptdt:contains("Author") i, .infotable tr:contains("Author") td:last-child').text().trim();
-    const genres     = [];
+    const author = $('.tsinfo .imptdt:contains("Author") i, .infotable tr:contains("Author") td:last-child').text().trim();
+    const genres = [];
     $('.mgen a').each((_, a) => genres.push($(a).text().trim()));
 
     // Chapters - try AJAX first (Madara theme) to get ALL chapters at once
     const chapters = [];
     const postId = $('#manga-chapters-holder').attr('data-id')
-                || $('[data-id]').filter((_, el) => $(el).attr('id') && $(el).attr('id').includes('manga')).first().attr('data-id')
-                || $('script:contains("manga_chapters")').first().html()?.match(/"manga"\s*:\s*"?(\d+)"?/)?.[1];
+      || $('[data-id]').filter((_, el) => $(el).attr('id') && $(el).attr('id').includes('manga')).first().attr('data-id')
+      || $('script:contains("manga_chapters")').first().html()?.match(/"manga"\s*:\s*"?(\d+)"?/)?.[1];
 
     let ajaxSuccess = false;
     if (postId) {
@@ -239,10 +242,10 @@ app.get('/api/manga/:slug', async (req, res) => {
           if (ajaxHtml && ajaxHtml.trim() !== '0' && ajaxHtml.includes('<li')) {
             const $a = cheerio.load(ajaxHtml);
             $a('li').each((_, el) => {
-              const chHref  = $a(el).find('a').attr('href') || '';
+              const chHref = $a(el).find('a').attr('href') || '';
               const chTitle = $a(el).find('.chapternum').text().trim() || $a(el).find('span').first().text().trim();
-              const chDate  = $a(el).find('.chapterdate').text().trim();
-              const chSlug  = chHref.replace(BASE + '/', '').replace(/\/$/, '');
+              const chDate = $a(el).find('.chapterdate').text().trim();
+              const chSlug = chHref.replace(BASE + '/', '').replace(/\/$/, '');
               if (chSlug) chapters.push({ title: chTitle, slug: chSlug, date: chDate });
             });
             if (chapters.length) ajaxSuccess = true;
@@ -256,10 +259,10 @@ app.get('/api/manga/:slug', async (req, res) => {
     // Fallback: scrape chapter list from HTML
     if (!ajaxSuccess) {
       $('#chapterlist li, .eplister ul li').each((_, el) => {
-        const chHref  = $(el).find('a').attr('href') || '';
+        const chHref = $(el).find('a').attr('href') || '';
         const chTitle = $(el).find('.chapternum').text().trim() || $(el).find('span').first().text().trim();
-        const chDate  = $(el).find('.chapterdate').text().trim();
-        const chSlug  = chHref.replace(BASE + '/', '').replace(/\/$/, '');
+        const chDate = $(el).find('.chapterdate').text().trim();
+        const chSlug = chHref.replace(BASE + '/', '').replace(/\/$/, '');
         if (chSlug) chapters.push({ title: chTitle, slug: chSlug, date: chDate });
       });
     }
@@ -277,9 +280,9 @@ app.get('/api/chapter', async (req, res) => {
   try {
     const slug = req.query.slug || '';
     // KomikKita chapter URL format: komikkita.com/slug-chapter-N/
-    const url  = `${BASE}/${slug}/`;
+    const url = `${BASE}/${slug}/`;
     const html = await getHTML(url, 3_600_000); // 1hr cache for chapter pages
-    const $    = cheerio.load(html);
+    const $ = cheerio.load(html);
 
     const images = [];
     // Madara theme reader
@@ -301,7 +304,7 @@ app.get('/api/chapter', async (req, res) => {
           const data = JSON.parse(m[1]);
           const srcs = data?.sources?.[0]?.images || [];
           images.push(...srcs);
-        } catch (_) {}
+        } catch (_) { }
       }
     }
 
@@ -323,17 +326,17 @@ app.get('/api/top', async (req, res) => {
     if (type) url += `&type=${encodeURIComponent(type)}`;
 
     const html = await getHTML(url, 120_000);
-    const $    = cheerio.load(html);
+    const $ = cheerio.load(html);
     const items = [];
 
     $('.listupd .bsx').each((_, el) => {
-      const title  = $(el).find('.tt').first().text().trim();
-      const href   = $(el).find('a').first().attr('href') || '';
-      const img    = imgSrc($, $(el).find('img').first());
-      const score  = $(el).find('.rating span').text().trim();
-      const type_  = $(el).find('.type').text().trim();
-      const latCh  = $(el).find('.epxs').text().trim();
-      const slug   = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
+      const title = $(el).find('.tt').first().text().trim();
+      const href = $(el).find('a').first().attr('href') || '';
+      const img = imgSrc($, $(el).find('img').first());
+      const score = $(el).find('.rating span').text().trim();
+      const type_ = $(el).find('.type').text().trim();
+      const latCh = $(el).find('.epxs').text().trim();
+      const slug = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
       if (title) items.push({ title, slug, img, score, type: type_, latestChapter: latCh });
     });
 
@@ -348,7 +351,7 @@ app.get('/api/top', async (req, res) => {
 app.get('/api/genres', async (req, res) => {
   try {
     const html = await getHTML(`${BASE}/manga/`, 3_600_000);
-    const $    = cheerio.load(html);
+    const $ = cheerio.load(html);
     const genres = [];
     $('.genre-list a, .genrelist a').each((_, a) => {
       const name = $(a).text().trim();
@@ -367,18 +370,18 @@ app.get('/api/genre/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
     const { page = 1 } = req.query;
-    const url  = `${BASE}/genres/${slug}/?page=${page}`;
+    const url = `${BASE}/genres/${slug}/?page=${page}`;
     const html = await getHTML(url, 120_000);
-    const $    = cheerio.load(html);
+    const $ = cheerio.load(html);
     const items = [];
 
     $('.listupd .bsx').each((_, el) => {
-      const title  = $(el).find('.tt').first().text().trim();
-      const href   = $(el).find('a').first().attr('href') || '';
-      const img    = imgSrc($, $(el).find('img').first());
-      const score  = $(el).find('.rating span').text().trim();
-      const type_  = $(el).find('.type').text().trim();
-      const slug_  = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
+      const title = $(el).find('.tt').first().text().trim();
+      const href = $(el).find('a').first().attr('href') || '';
+      const img = imgSrc($, $(el).find('img').first());
+      const score = $(el).find('.rating span').text().trim();
+      const type_ = $(el).find('.type').text().trim();
+      const slug_ = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
       if (title) items.push({ title, slug: slug_, img, score, type: type_ });
     });
 

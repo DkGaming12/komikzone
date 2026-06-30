@@ -1,15 +1,20 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KomikZone – Baca Manga Manhwa Manhua Online</title>
-  <meta name="description" content="Baca manga, manhwa, manhua terlengkap. Update chapter terbaru setiap hari gratis!" />
+  <meta name="description"
+    content="Baca manga, manhwa, manhua terlengkap. Update chapter terbaru setiap hari gratis!" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="style.css?v=20260624b" />
 </head>
+
 <body>
 
   <!-- ========== NAVBAR ========== -->
@@ -17,12 +22,12 @@
     <div class="nav-wrap">
       <a class="brand" href="#" data-nav="home">
         <svg class="brand-logo" width="32" height="32" viewBox="0 0 32 32">
-          <rect width="32" height="32" rx="8" fill="url(#lg)"/>
-          <path d="M9 8h5v16H9V8zm7 0h7v4h-7V8zm0 6h7v4h-7v-4zm0 6h7v4h-7v-4z" fill="rgba(255,255,255,0.92)"/>
+          <rect width="32" height="32" rx="8" fill="url(#lg)" />
+          <path d="M9 8h5v16H9V8zm7 0h7v4h-7V8zm0 6h7v4h-7v-4zm0 6h7v4h-7v-4z" fill="rgba(255,255,255,0.92)" />
           <defs>
             <linearGradient id="lg" x1="0" y1="0" x2="32" y2="32">
-              <stop offset="0%" stop-color="#7c3aed"/>
-              <stop offset="100%" stop-color="#c026d3"/>
+              <stop offset="0%" stop-color="#7c3aed" />
+              <stop offset="100%" stop-color="#c026d3" />
             </linearGradient>
           </defs>
         </svg>
@@ -31,15 +36,18 @@
 
       <!-- Search bar – centred like Shinigami -->
       <div class="nav-search" id="nav-search">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input id="q" type="text" placeholder="Cari Komik" autocomplete="off"/>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
+        </svg>
+        <input id="q" type="text" placeholder="Cari Komik" autocomplete="off" />
         <kbd>Ctrl</kbd><kbd>K</kbd>
         <div class="search-drop" id="search-drop"></div>
       </div>
 
       <div class="nav-actions">
         <button class="hamburger" id="hamburger">
-          <span/><span/><span/>
+          <span /><span /><span />
         </button>
       </div>
     </div>
@@ -79,7 +87,7 @@
       <!-- Featured Slider -->
       <section class="featured" id="featured">
         <div class="feat-slides" id="feat-slides"><!-- JS --></div>
-        <button class="feat-arrow left"  id="feat-prev">‹</button>
+        <button class="feat-arrow left" id="feat-prev">‹</button>
         <button class="feat-arrow right" id="feat-next">›</button>
         <div class="feat-dots" id="feat-dots"></div>
       </section>
@@ -93,25 +101,37 @@
         <div class="history-row" id="history-row"><!-- JS --></div>
       </section>
 
-      <!-- Update Terbaru (chapter-style list) -->
+      <!-- Rekomendasi (4-card slider with type filter) -->
+      <section class="home-blk" id="reko-blk">
+        <div class="blk-head">
+          <h2 class="blk-title">⭐ Rekomendasi</h2>
+        </div>
+        <div class="reko-filter">
+          <button class="filt active" data-reko="all">Semua</button>
+          <button class="filt" data-reko="Manhwa">Manhwa</button>
+          <button class="filt" data-reko="Manga">Manga</button>
+          <button class="filt" data-reko="Manhua">Manhua</button>
+        </div>
+        <div class="reko-slider-wrap">
+          <button class="reko-arrow left" id="reko-prev">‹</button>
+          <div class="reko-slider" id="reko-slider">
+            <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+            <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+            <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+            <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          </div>
+          <button class="reko-arrow right" id="reko-next">›</button>
+        </div>
+      </section>
+
+      <!-- Update Terbaru (card grid + pagination) -->
       <section class="home-blk">
         <div class="blk-head">
           <h2 class="blk-title"><span class="live-dot"></span> Update Terbaru</h2>
           <a class="blk-more" data-nav="explore" href="#">Semua</a>
         </div>
-        <!-- 2-column chapter update list like Shinigami -->
-        <div class="update-grid" id="update-grid">
-          <div class="skel-list" id="update-skel">
-            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
-            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
-            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
-            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
-            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
-            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
-            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
-            <div class="skel-row"><div class="skel-thumb"></div><div class="skel-lines"><div class="skel-line"></div><div class="skel-line s"></div><div class="skel-line xs"></div></div></div>
-          </div>
-        </div>
+        <div class="card-grid" id="update-grid"></div>
+        <div class="pager" id="update-pager"></div>
       </section>
 
       <!-- Popular / Hot -->
@@ -121,14 +141,62 @@
           <a class="blk-more" data-nav="top" href="#">Semua</a>
         </div>
         <div class="card-grid" id="pop-grid">
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -139,14 +207,62 @@
           <a class="blk-more" data-nav="genre" href="#">Lihat Genre</a>
         </div>
         <div class="card-grid" id="manhwa-grid">
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -157,14 +273,62 @@
           <a class="blk-more" data-nav="allseries" href="#">Lihat Semua</a>
         </div>
         <div class="card-grid" id="manhua-grid">
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line" style="margin-bottom:6px"></div><div class="skel-line s"></div></div></div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
+          <div class="skel-card">
+            <div class="skel-img"></div>
+            <div class="kc-body">
+              <div class="skel-line" style="margin-bottom:6px"></div>
+              <div class="skel-line s"></div>
+            </div>
+          </div>
         </div>
       </section>
     </div>
@@ -302,23 +466,37 @@
   <!-- Bottom Nav (Shinigami style) -->
   <nav class="bnav">
     <a class="bnav-i active" data-nav="home">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+      </svg>
       <span>Home</span>
     </a>
     <a class="bnav-i" data-nav="explore">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.35-4.35" />
+      </svg>
       <span>Explore</span>
     </a>
     <a class="bnav-i" data-nav="top">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26" />
+      </svg>
       <span>Top</span>
     </a>
     <a class="bnav-i" data-nav="genre">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7" />
+        <rect x="14" y="3" width="7" height="7" />
+        <rect x="14" y="14" width="7" height="7" />
+        <rect x="3" y="14" width="7" height="7" />
+      </svg>
       <span>Library</span>
     </a>
     <a class="bnav-i" data-nav="allseries">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+      </svg>
       <span>All Series</span>
     </a>
   </nav>
@@ -346,7 +524,8 @@
       <button class="popup-close" id="popup-close">✕</button>
       <div class="popup-icon">☕</div>
       <h3 class="popup-title">Dukung KomikZone!</h3>
-      <p class="popup-desc">Suka baca komik di sini? Dukung kami dengan traktir kopi agar web ini terus update dan bebas iklan mengganggu!</p>
+      <p class="popup-desc">Suka baca komik di sini? Dukung kami dengan traktir kopi agar web ini terus update dan bebas
+        iklan mengganggu!</p>
       <a href="https://teer.id/komikzone" target="_blank" rel="noopener" class="popup-btn" id="popup-btn">
         Dukung via Trakteer
       </a>
@@ -361,4 +540,5 @@
   </script>
   <script src="app.js?v=20260624b"></script>
 </body>
+
 </html>
