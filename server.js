@@ -1,14 +1,12 @@
 /**
  * KomikZone Backend Proxy Server
- * Scrapes KomikKita.com (WordPress/Madara) and serves JSON API
- * Port: 3001 (frontend at 8080)
+ * Scrapes KomikKita (WordPress/Madara) and serves JSON API
+ * Port: 3001 (frontend at 8080 / static)
  */
 
 const express = require('express');
 const cors = require('cors');
-const fetch = require('node-fetch');
 const cheerio = require('cheerio');
-
 const path = require('path');
 
 const app = express();
@@ -18,7 +16,7 @@ app.use(cors());
 app.use(express.static(path.join(__dirname)));
 
 /* ── helpers ─────────────────────────────────────────── */
-const BASE = 'https://komikkita.com';
+const BASE = 'https://komikkita.net';
 
 const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36',
@@ -26,61 +24,113 @@ const HEADERS = {
   'Referer': BASE
 };
 
+// Simple in-memory cache { url: { ts, html } }
 const cache = new Map();
+const MAX_CACHE = 200;
 
 async function getHTML(url, ttl = 300_000) {
-  if (cache.has(url)) {
-    const { ts, html } = cache.get(url);
-    if (Date.now() - ts < ttl) return html;
+  const hit = cache.get(url);
+  if (hit && Date.now() - hit.ts < ttl) return hit.html;
+
+  // Global fetch (Node 18+) with a real timeout — retry once on network failure
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(15000) });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const html = await r.text();
+      if (cache.size > MAX_CACHE) cache.clear();
+      cache.set(url, { ts: Date.now(), html });
+      return html;
+    } catch (e) {
+      lastErr = e;
+      if (attempt === 0) await new Promise(res => setTimeout(res, 800));
+    }
   }
-  const r = await fetch(url, { headers: HEADERS, timeout: 12000 });
-  if (!r.ok) throw new Error(`HTTP ${r.status} – ${url}`);
-  const html = await r.text();
-  cache.set(url, { ts: Date.now(), html });
-  return html;
+  throw new Error(`Gagal mengambil ${url} (${lastErr?.message || 'network error'})`);
+}
+
+/** Extract last path segment, e.g. "/manga/one-piece/" → "one-piece" */
+function slugFromHref(href) {
+  if (!href) return '';
+  try {
+    const p = new URL(href, BASE).pathname;
+    return p.replace(/^\/+/, '').replace(/\/+$/, '');
+  } catch {
+    return String(href).replace(/^\/+/, '').replace(/\/+$/, '');
+  }
+}
+
+/** Manga slug from any href (strips optional "manga/" folder) */
+function mangaSlugFromHref(href) {
+  return slugFromHref(href).replace(/^manga\//, '');
 }
 
 function imgSrc($, el) {
-  return $(el).attr('data-src')
-    || $(el).attr('data-lazy-src')
-    || $(el).attr('data-cfsrc')
-    || $(el).attr('src')
-    || '';
+  if (!el || !el.length) return '';
+  return (el.attr('data-src') || el.attr('data-lazy-src') || el.attr('data-cfsrc') || el.attr('src') || '').trim();
+}
+
+/** Parse list items (.bsx cards) shared by list/search/top/genre endpoints */
+function parseBsxList($) {
+  const items = [];
+  $('.listupd .bsx').each((_, el) => {
+    const title = $(el).find('.tt').first().text().trim();
+    const href = $(el).find('a').first().attr('href') || '';
+    const img = imgSrc($, $(el).find('img').first());
+    const score = $(el).find('.rating span, .numscore').first().text().trim();
+    const type = $(el).find('.type').first().text().trim();
+    const latestChapter = $(el).find('.epxs').first().text().trim();
+    const slug = mangaSlugFromHref(href);
+    if (title && slug) items.push({ title, slug, img, score, type, latestChapter });
+  });
+  return items;
+}
+
+function parseTotalPages($) {
+  const nums = $('.pagination .page-numbers')
+    .map((_, el) => parseInt($(el).text()))
+    .get()
+    .filter(n => !isNaN(n));
+  return nums.length ? Math.max(...nums) : 1;
 }
 
 /* ── /api/home ───────────────────────────────────────── */
-// Latest updates + popular
 app.get('/api/home', async (req, res) => {
   try {
     const html = await getHTML(`${BASE}/home/`);
     const $ = cheerio.load(html);
 
-    // Featured slider - try multiple selector patterns
-    const featured = [];
-    const featuredSelectors = [
-      '.slider .bs',
-      '.featured-slider .bsx',
-      '.owl-carousel .bsx',
-      '#slider .bsx',
-      '.postbody .bsx',
-    ];
-    for (const sel of featuredSelectors) {
-      $(sel).each((_, el) => {
-        const title = $(el).find('.tt, .bigor .tt').first().text().trim();
-        const href = $(el).find('a').first().attr('href') || '';
-        const img = imgSrc($, $(el).find('img').first());
-        const genres = [];
-        $(el).find('.ge-ul a, .genres-list a').each((_, g) => genres.push($(g).text().trim()));
-        const slug = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
-        if (title && !featured.find(f => f.slug === slug)) featured.push({ title, slug, img, genres });
-      });
-      if (featured.length >= 3) break;
+    // Popular from homepage widgets ("Populer Hari Ini" etc.)
+    let popular = [];
+    $('.widget_series .bsx, .bixbox.hothome .bsx').each((_, el) => {
+      const title = $(el).find('.tt').first().text().trim();
+      const href = $(el).find('a').first().attr('href') || '';
+      const img = imgSrc($, $(el).find('img').first());
+      const score = $(el).find('.rating span, .numscore').first().text().trim();
+      const slug = mangaSlugFromHref(href);
+      if (title && slug) popular.push({ title, slug, img, score });
+    });
+
+    // Fallback: fetch popular list page
+    if (!popular.length) {
+      try {
+        const popHtml = await getHTML(`${BASE}/manga/?order=popular`, 120_000);
+        popular = parseBsxList(cheerio.load(popHtml)).slice(0, 12);
+      } catch (e) {
+        console.warn('Popular fallback failed:', e.message);
+      }
+    } else {
+      popular = popular.slice(0, 12);
     }
 
-    // Latest updates list
+    // Featured slider: site slider is empty — use top popular items
+    const featured = popular.slice(0, 6).map(m => ({ ...m, genres: [] }));
+
+    // Latest updates (list with latest 3 chapters each)
     const updates = [];
     $('.listupd .uta').each((_, el) => {
-      const title = $(el).find('.luf .imgu img').attr('title') || $(el).find('h4').text().trim();
+      const title = $(el).find('.luf .imgu img').attr('title') || $(el).find('h4').first().text().trim();
       const href = $(el).find('a').first().attr('href') || '';
       const img = imgSrc($, $(el).find('img').first());
       const chapters = [];
@@ -88,54 +138,21 @@ app.get('/api/home', async (req, res) => {
         const chHref = $(li).find('a').attr('href') || '';
         const chTitle = $(li).find('a').text().trim();
         const chDate = $(li).find('span').text().trim();
-        const chSlug = chHref.replace(BASE + '/', '').replace(/\/$/, '');
-        if (chTitle) chapters.push({ title: chTitle, slug: chSlug, date: chDate });
+        const chSlug = slugFromHref(chHref);
+        if (chTitle && chSlug) chapters.push({ title: chTitle, slug: chSlug, date: chDate });
       });
-      const slug = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
-      if (title) updates.push({ title, slug, img, chapters: chapters.slice(0, 3) });
+      const slug = mangaSlugFromHref(href);
+      if (title && slug) updates.push({ title, slug, img, chapters: chapters.slice(0, 3) });
     });
 
-    let popular = [];
-    $('.postbody .pop-list .bsx, .widget_series .bsx, .bixbox.hothome .bsx').each((_, el) => {
-      const title = $(el).find('.tt').first().text().trim();
-      const href = $(el).find('a').first().attr('href') || '';
-      const img = imgSrc($, $(el).find('img').first());
-      const score = $(el).find('.rating span, .numscore').text().trim();
-      const slug = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
-      if (title) popular.push({ title, slug, img, score });
-    });
-
-    if (!popular.length) {
-      try {
-        const popHtml = await getHTML(`${BASE}/manga/?order=popular`);
-        const $p = cheerio.load(popHtml);
-        $p('.listupd .bsx').slice(0, 10).each((_, el) => {
-          const title = $p(el).find('.tt').first().text().trim();
-          const href = $p(el).find('a').first().attr('href') || '';
-          const img = imgSrc($p, $p(el).find('img').first());
-          const score = $p(el).find('.rating span').text().trim();
-          const slug = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
-          if (title) popular.push({ title, slug, img, score });
-        });
-      } catch (e) {
-        console.warn('Failed to fetch popular fallback', e.message);
-      }
-    }
-
-    // Fallback: if featured is empty, use popular items
-    const featuredFinal = featured.length
-      ? featured.slice(0, 6)
-      : popular.slice(0, 6).map(m => ({ ...m, genres: [] }));
-
-    res.json({ featured: featuredFinal, updates: updates.slice(0, 16), popular: popular.slice(0, 12) });
+    res.json({ featured, updates: updates.slice(0, 16), popular });
   } catch (e) {
     console.error('/api/home error:', e.message);
-    res.status(500).json({ error: e.message });
+    res.status(502).json({ error: 'Sumber data sedang tidak bisa diakses. Coba lagi beberapa saat.' });
   }
 });
 
 /* ── /api/list ───────────────────────────────────────── */
-// List komik dengan filter & pagination
 app.get('/api/list', async (req, res) => {
   try {
     const { page = 1, order = 'update', type = '', status = '', genre = '' } = req.query;
@@ -144,29 +161,11 @@ app.get('/api/list', async (req, res) => {
     if (status) url += `&status=${encodeURIComponent(status)}`;
     if (genre) url += `&genre=${encodeURIComponent(genre)}`;
 
-    const html = await getHTML(url, 60_000);
-    const $ = cheerio.load(html);
-
-    const items = [];
-    $('.listupd .bsx').each((_, el) => {
-      const title = $(el).find('.tt').first().text().trim();
-      const href = $(el).find('a').first().attr('href') || '';
-      const img = imgSrc($, $(el).find('img').first());
-      const score = $(el).find('.rating span').text().trim();
-      const type_ = $(el).find('.type').text().trim();
-      const status_ = $(el).find('.status').text().trim();
-      const latCh = $(el).find('.epxs').text().trim();
-      const slug = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
-      if (title) items.push({ title, slug, img, score, type: type_, status: status_, latestChapter: latCh });
-    });
-
-    // Pagination
-    const totalPages = parseInt($('.pagination .page-numbers:not(.next):not(.prev)').last().text()) || 1;
-
-    res.json({ items, page: Number(page), totalPages });
+    const $ = cheerio.load(await getHTML(url, 60_000));
+    res.json({ items: parseBsxList($), page: Number(page), totalPages: parseTotalPages($) });
   } catch (e) {
     console.error('/api/list error:', e.message);
-    res.status(500).json({ error: e.message });
+    res.status(502).json({ error: 'Gagal memuat daftar komik.' });
   }
 });
 
@@ -176,24 +175,11 @@ app.get('/api/search', async (req, res) => {
     const { q = '' } = req.query;
     if (!q) return res.json({ items: [] });
 
-    const url = `${BASE}/?s=${encodeURIComponent(q)}`;
-    const html = await getHTML(url, 60_000);
-    const $ = cheerio.load(html);
-
-    const items = [];
-    $('.listupd .bsx, .search-wrap .bsx').each((_, el) => {
-      const title = $(el).find('.tt').first().text().trim();
-      const href = $(el).find('a').first().attr('href') || '';
-      const img = imgSrc($, $(el).find('img').first());
-      const score = $(el).find('.rating span').text().trim();
-      const type_ = $(el).find('.type').text().trim();
-      const slug = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
-      if (title) items.push({ title, slug, img, score, type: type_ });
-    });
-
-    res.json({ items: items.slice(0, 10) });
+    const $ = cheerio.load(await getHTML(`${BASE}/?s=${encodeURIComponent(q)}`, 60_000));
+    res.json({ items: parseBsxList($).slice(0, 10) });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error('/api/search error:', e.message);
+    res.status(502).json({ error: 'Pencarian gagal.' });
   }
 });
 
@@ -202,119 +188,80 @@ app.get('/api/manga/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
     const url = `${BASE}/manga/${slug}/`;
-    const html = await getHTML(url);
-    const $ = cheerio.load(html);
+    const $ = cheerio.load(await getHTML(url));
 
-    const title = $('h1.entry-title, .seriestukon h1').first().text().trim();
-    const altTitle = $('.seriestualt').text().trim();
+    const title = $('h1.entry-title').first().text().trim();
+    if (!title) return res.status(404).json({ error: 'Komik tidak ditemukan.' });
+
+    const altTitle = $('.seriestualt').first().text().trim();
     const img = imgSrc($, $('.thumb img, .sertothumb img, .thumbook img').first());
     const synopsis = $('.entry-content p, .synp p, .entry-content').first().text().trim();
     const score = $('.rating-num, .num').first().text().trim();
-    const status = $('.tsinfo .imptdt:contains("Status") i, .infotable td:contains("Ongoing"), .infotable td:contains("Completed")').first().text().trim()
-      || $('time').first().attr('datetime') || '';
-    const type_ = $('.tsinfo .imptdt:contains("Type") a, .infotable td:contains("Manga"), .infotable td:contains("Manhwa"), .infotable td:contains("Manhua")').first().text().trim();
-    // Author might be in .infotable or .tsinfo
-    const author = $('.tsinfo .imptdt:contains("Author") i, .infotable tr:contains("Author") td:last-child').text().trim();
+    const status = $('.tsinfo .imptdt:contains("Status") i').first().text().trim()
+      || $('.infotable td:contains("Ongoing"), .infotable td:contains("Completed")').first().text().trim();
+    const type = $('.tsinfo .imptdt:contains("Type") a').first().text().trim()
+      || $('.infotable td:contains("Manga"), .infotable td:contains("Manhwa"), .infotable td:contains("Manhua")').first().text().trim();
+    const author = $('.tsinfo .imptdt:contains("Author") i').first().text().trim()
+      || $('.infotable tr:contains("Author") td:last-child').first().text().trim();
     const genres = [];
     $('.mgen a').each((_, a) => genres.push($(a).text().trim()));
 
-    // Chapters - try AJAX first (Madara theme) to get ALL chapters at once
+    // Chapter list is fully rendered in the HTML (newest first)
     const chapters = [];
-    const postId = $('#manga-chapters-holder').attr('data-id')
-      || $('[data-id]').filter((_, el) => $(el).attr('id') && $(el).attr('id').includes('manga')).first().attr('data-id')
-      || $('script:contains("manga_chapters")').first().html()?.match(/"manga"\s*:\s*"?(\d+)"?/)?.[1];
+    $('#chapterlist li, .eplister ul li').each((_, el) => {
+      const chHref = $(el).find('a').attr('href') || '';
+      const chTitle = $(el).find('.chapternum').first().text().trim() || $(el).find('span').first().text().trim();
+      const chDate = $(el).find('.chapterdate').first().text().trim();
+      const chSlug = slugFromHref(chHref);
+      if (chSlug) chapters.push({ title: chTitle || 'Chapter', slug: chSlug, date: chDate });
+    });
 
-    let ajaxSuccess = false;
-    if (postId) {
-      try {
-        const ajaxRes = await fetch(`${BASE}/wp-admin/admin-ajax.php`, {
-          method: 'POST',
-          headers: {
-            ...HEADERS,
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'X-Requested-With': 'XMLHttpRequest'
-          },
-          body: `action=manga_get_chapters&manga=${postId}`,
-          timeout: 10000
-        });
-        if (ajaxRes.ok) {
-          const ajaxHtml = await ajaxRes.text();
-          if (ajaxHtml && ajaxHtml.trim() !== '0' && ajaxHtml.includes('<li')) {
-            const $a = cheerio.load(ajaxHtml);
-            $a('li').each((_, el) => {
-              const chHref = $a(el).find('a').attr('href') || '';
-              const chTitle = $a(el).find('.chapternum').text().trim() || $a(el).find('span').first().text().trim();
-              const chDate = $a(el).find('.chapterdate').text().trim();
-              const chSlug = chHref.replace(BASE + '/', '').replace(/\/$/, '');
-              if (chSlug) chapters.push({ title: chTitle, slug: chSlug, date: chDate });
-            });
-            if (chapters.length) ajaxSuccess = true;
-          }
-        }
-      } catch (e) {
-        console.warn('AJAX chapters failed, falling back to HTML:', e.message);
-      }
-    }
-
-    // Fallback: scrape chapter list from HTML
-    if (!ajaxSuccess) {
-      $('#chapterlist li, .eplister ul li').each((_, el) => {
-        const chHref = $(el).find('a').attr('href') || '';
-        const chTitle = $(el).find('.chapternum').text().trim() || $(el).find('span').first().text().trim();
-        const chDate = $(el).find('.chapterdate').text().trim();
-        const chSlug = chHref.replace(BASE + '/', '').replace(/\/$/, '');
-        if (chSlug) chapters.push({ title: chTitle, slug: chSlug, date: chDate });
-      });
-    }
-
-    res.json({ title, altTitle, img, synopsis, score, status: status.trim(), type: type_, author, genres, chapters });
+    res.json({ title, altTitle, img, synopsis, score, status, type, author, genres, chapters });
   } catch (e) {
     console.error('/api/manga/:slug error:', e.message);
-    res.status(500).json({ error: e.message });
+    res.status(502).json({ error: 'Gagal memuat detail komik.' });
   }
 });
 
-/* ── /api/chapter/:slug ──────────────────────────────── */
-// Returns array of image URLs for a chapter
+/* ── /api/chapter?slug= ──────────────────────────────── */
 app.get('/api/chapter', async (req, res) => {
   try {
-    const slug = req.query.slug || '';
-    // KomikKita chapter URL format: komikkita.com/slug-chapter-N/
+    const slug = slugFromHref(req.query.slug || '');
+    if (!slug) return res.status(400).json({ error: 'Slug chapter tidak valid.' });
+
     const url = `${BASE}/${slug}/`;
-    const html = await getHTML(url, 3_600_000); // 1hr cache for chapter pages
-    const $ = cheerio.load(html);
+    const $ = cheerio.load(await getHTML(url, 3_600_000)); // 1hr cache
 
     const images = [];
-    // Madara theme reader
+    const seen = new Set();
     $('.reading-content .page-break img, .reader-area img, #readerarea img').each((_, img) => {
       let src = imgSrc($, img);
-      if (src) {
-        src = src.trim();
-        // Skip tracking pixel / very small images
-        if (!src.includes('pixel') && !src.endsWith('.gif')) images.push(src);
-      }
+      if (!src) return;
+      try { src = new URL(src, BASE).href; } catch { /* keep as-is */ }
+      // Skip tracking pixels / icons
+      if (/pixel|logo|banner/i.test(src) || src.endsWith('.gif') || src.endsWith('.svg')) return;
+      if (!seen.has(src)) { seen.add(src); images.push(src); }
     });
 
-    // Also try ts_reader JSON embedded in page
+    // Fallback: ts_reader JSON embedded in page
     if (!images.length) {
       const scripts = $('script').map((_, s) => $(s).html()).get().join('\n');
-      const m = scripts.match(/ts_reader\.run\(({.*?})\)/s);
+      const m = scripts.match(/ts_reader\.run\(\s*(\{[\s\S]*?\})\s*\)\s*;/);
       if (m) {
         try {
           const data = JSON.parse(m[1]);
-          const srcs = data?.sources?.[0]?.images || [];
-          images.push(...srcs);
-        } catch (_) { }
+          for (const src of (data?.sources?.[0]?.images || [])) {
+            if (src && !seen.has(src)) { seen.add(src); images.push(src); }
+          }
+        } catch { /* ignore bad JSON */ }
       }
     }
 
-    const manga = $('html').find('meta[property="og:url"]').attr('content') || '';
-    const chapterTitle = $('h1.entry-title').text().trim() || '';
-
+    const chapterTitle = $('h1.entry-title').first().text().trim();
     res.json({ images, chapterTitle, sourceUrl: url });
   } catch (e) {
-    console.error('/api/chapter/:slug error:', e.message);
-    res.status(500).json({ error: e.message });
+    console.error('/api/chapter error:', e.message);
+    res.status(502).json({ error: 'Gagal memuat gambar chapter.' });
   }
 });
 
@@ -325,43 +272,30 @@ app.get('/api/top', async (req, res) => {
     let url = `${BASE}/manga/?page=${page}&order=popular`;
     if (type) url += `&type=${encodeURIComponent(type)}`;
 
-    const html = await getHTML(url, 120_000);
-    const $ = cheerio.load(html);
-    const items = [];
-
-    $('.listupd .bsx').each((_, el) => {
-      const title = $(el).find('.tt').first().text().trim();
-      const href = $(el).find('a').first().attr('href') || '';
-      const img = imgSrc($, $(el).find('img').first());
-      const score = $(el).find('.rating span').text().trim();
-      const type_ = $(el).find('.type').text().trim();
-      const latCh = $(el).find('.epxs').text().trim();
-      const slug = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
-      if (title) items.push({ title, slug, img, score, type: type_, latestChapter: latCh });
-    });
-
-    const totalPages = parseInt($('.pagination .page-numbers:not(.next):not(.prev)').last().text()) || 1;
-    res.json({ items, page: Number(page), totalPages });
+    const $ = cheerio.load(await getHTML(url, 120_000));
+    res.json({ items: parseBsxList($), page: Number(page), totalPages: parseTotalPages($) });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error('/api/top error:', e.message);
+    res.status(502).json({ error: 'Gagal memuat top komik.' });
   }
 });
 
 /* ── /api/genres ─────────────────────────────────────── */
 app.get('/api/genres', async (req, res) => {
   try {
-    const html = await getHTML(`${BASE}/manga/`, 3_600_000);
-    const $ = cheerio.load(html);
+    const $ = cheerio.load(await getHTML(`${BASE}/genres/`, 3_600_000));
+    const seen = new Set();
     const genres = [];
-    $('.genre-list a, .genrelist a').each((_, a) => {
-      const name = $(a).text().trim();
-      const href = $(a).attr('href') || '';
-      const slug = href.replace(BASE + '/genres/', '').replace(/\/$/, '');
-      if (name) genres.push({ name, slug });
+    $('a[href*="/genres/"]').each((_, a) => {
+      // Strip trailing count, e.g. "Action 1395" → "Action"
+      const name = $(a).text().replace(/\s*\d+\s*$/, '').trim();
+      const slug = slugFromHref($(a).attr('href')).replace(/^genres\//, '');
+      if (name && slug && !seen.has(slug)) { seen.add(slug); genres.push({ name, slug }); }
     });
     res.json({ genres });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error('/api/genres error:', e.message);
+    res.status(502).json({ error: 'Gagal memuat daftar genre.' });
   }
 });
 
@@ -371,24 +305,16 @@ app.get('/api/genre/:slug', async (req, res) => {
     const { slug } = req.params;
     const { page = 1 } = req.query;
     const url = `${BASE}/genres/${slug}/?page=${page}`;
-    const html = await getHTML(url, 120_000);
-    const $ = cheerio.load(html);
-    const items = [];
-
-    $('.listupd .bsx').each((_, el) => {
-      const title = $(el).find('.tt').first().text().trim();
-      const href = $(el).find('a').first().attr('href') || '';
-      const img = imgSrc($, $(el).find('img').first());
-      const score = $(el).find('.rating span').text().trim();
-      const type_ = $(el).find('.type').text().trim();
-      const slug_ = href.replace(BASE + '/manga/', '').replace(/\/$/, '');
-      if (title) items.push({ title, slug: slug_, img, score, type: type_ });
+    const $ = cheerio.load(await getHTML(url, 120_000));
+    res.json({
+      items: parseBsxList($),
+      page: Number(page),
+      totalPages: parseTotalPages($),
+      genreName: slug
     });
-
-    const totalPages = parseInt($('.pagination .page-numbers:not(.next):not(.prev)').last().text()) || 1;
-    res.json({ items, page: Number(page), totalPages, genreName: slug });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error('/api/genre/:slug error:', e.message);
+    res.status(502).json({ error: 'Gagal memuat komik berdasarkan genre.' });
   }
 });
 

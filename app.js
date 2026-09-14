@@ -1,45 +1,72 @@
 /* =====================================================
    KomikZone – app.js
-   Data source: KomikKita.com  via local proxy :3001
+   Data source: KomikKita via proxy
    ===================================================== */
 
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const PROXY = isLocal ? 'http://localhost:3001' : '';
 
-/* ── simple fetch with cache ── */
+/* ── fetch with cache, timeout & clear errors ── */
 const _apiCache = new Map();
+const _inflight = new Map();
+
 async function api(url) {
   if (_apiCache.has(url)) return _apiCache.get(url);
-  try {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error(r.status);
-    const d = await r.json();
-    _apiCache.set(url, d);
-    return d;
-  } catch (e) { console.warn('API err:', url, e); return null; }
+  if (_inflight.has(url)) return _inflight.get(url);
+
+  const p = (async () => {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(25000) });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      _apiCache.set(url, d);
+      return d;
+    } catch (e) {
+      console.warn('API err:', url, e.message);
+      return null;
+    } finally {
+      _inflight.delete(url);
+    }
+  })();
+
+  _inflight.set(url, p);
+  return p;
 }
 
 /* ── DOM helpers ── */
 const $ = id => document.getElementById(id);
 const $$ = s => [...document.querySelectorAll(s)];
 
+function esc(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function showToast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.add('on');
   setTimeout(() => t.classList.remove('on'), 2800);
+}
+
+/** Retry button box for failed loads — fn must be callable from onclick string */
+function retryBox(msg = 'Gagal memuat data.') {
+  return `<div class="empty-box" style="padding:3rem">
+    <div class="ei">📡</div>
+    <div class="et">${esc(msg)}</div>
+    <div class="es">Periksa koneksi internet lalu coba lagi</div>
+    <button class="btn-primary" style="margin-top:1rem" onclick="location.reload()">🔄 Muat Ulang</button>
+  </div>`;
 }
 
 /* ── State ── */
 let curPg = 'home';
 let prevPg = 'home';
 
-let expPage = 1, expSort = 'update', expType = '', expStatus = '';
-let topPage = 1, topType = '';
-let allPage = 1;
-let gSlug = '', gName = '', gPage = 1;
+let expSort = 'update', expType = '', expStatus = '';
+let topType = '';
 
 let slideIdx = 0, slideN = 0, slideTimer = null;
 
-/* ── Genre list (from KomikKita) ── */
+/* ── Genre list (fallback if API empty) ── */
 const GENRES_DEFAULT = [
   { name: 'Action', slug: 'action', icon: '⚔️' },
   { name: 'Adventure', slug: 'adventure', icon: '🗺️' },
@@ -66,40 +93,42 @@ const GENRES_DEFAULT = [
 /* ─────────────────────────────────────────────────────
    CARD BUILDERS
 ───────────────────────────────────────────────────── */
+function openReaderSafe(chSlug, title) {
+  openReader(chSlug, title);
+}
+
 function buildCard(m) {
   const el = document.createElement('div');
   el.className = 'komik-card';
   el.onclick = () => openDetail(m.slug);
 
-  const typeLabel = m.type ? `<span class="kc-type tag t-${(m.type || '').toLowerCase()}">${m.type}</span>` : '';
-  const score = m.score ? `<div class="kc-score">★ ${m.score}</div>` : '';
-  
+  const typeLabel = m.type ? `<span class="kc-type tag t-${esc(m.type.toLowerCase())}">${esc(m.type)}</span>` : '';
+  const score = m.score ? `<div class="kc-score">★ ${esc(m.score)}</div>` : '';
+  const safeTitle = esc(m.title || '');
+
   // Build chapter badges (max 2) below title
   let chaptersHtml = '';
   if (m.chapters && m.chapters.length > 0) {
     chaptersHtml = `<div class="kc-chapters">` + m.chapters.slice(0, 2).map(c => `
-      <div class="kc-ch" onclick="event.stopPropagation();openReader('${c.slug}','${(m.title || '').replace(/'/g, "\\'")}')">
-        <span class="kc-ch-num">${c.title || 'Chapter'}</span>
-        <span class="kc-ch-time">${c.date || ''}</span>
+      <div class="kc-ch" data-ch="${esc(c.slug)}" data-title="${safeTitle}">
+        <span class="kc-ch-num">${esc(c.title || 'Chapter')}</span>
+        <span class="kc-ch-time">${esc(c.date || '')}</span>
       </div>`).join('') + `</div>`;
   } else if (m.latestChapter) {
     chaptersHtml = `<div class="kc-chapters">
-      <div class="kc-ch">
-        <span class="kc-ch-num">${m.latestChapter}</span>
-        <span class="kc-ch-time"></span>
-      </div>
+      <div class="kc-ch"><span class="kc-ch-num">${esc(m.latestChapter)}</span></div>
     </div>`;
   }
 
   el.innerHTML = `
     <div class="kc-thumb">
-      <img class="kc-img" src="${m.img || ''}" alt="${m.title || ''}" loading="lazy"
-        onerror="this.src='';this.parentElement.innerHTML='<div class=no-img>📚<br>${(m.title || '').slice(0, 12)}</div>'">
+      <img class="kc-img" src="${esc(m.img || '')}" alt="${safeTitle}" loading="lazy"
+        onerror="this.onerror=null;this.parentElement.classList.add('noimg');this.remove()">
       ${typeLabel}${score}
       <div class="kc-ov"><div class="kc-play">▶</div></div>
     </div>
     <div class="kc-body">
-      <div class="kc-title">${m.title || 'Tanpa Judul'}</div>
+      <div class="kc-title">${safeTitle || 'Tanpa Judul'}</div>
       ${chaptersHtml}
     </div>`;
   return el;
@@ -109,54 +138,91 @@ function buildUpdateRow(m, i) {
   const el = document.createElement('div');
   el.className = 'update-row';
 
-  const typeLabel = m.type ? `<span class="up-type-badge t-${(m.type || '').toLowerCase()}">${m.type}</span>` : '';
+  const typeLabel = m.type ? `<span class="up-type-badge t-${esc(m.type.toLowerCase())}">${esc(m.type)}</span>` : '';
+  const safeTitle = esc(m.title || '');
   const chapters = (m.chapters || []).slice(0, 3).map(c => `
-    <div class="up-ch" onclick="event.stopPropagation();openReader('${c.slug}','${(m.title || '').replace(/'/g, "\\'")}')">
-      <span class="up-ch-num">${c.title}</span>
-      <span class="up-ch-time">${c.date || ''}</span>
+    <div class="up-ch" data-ch="${esc(c.slug)}" data-title="${safeTitle}">
+      <span class="up-ch-num">${esc(c.title)}</span>
+      <span class="up-ch-time">${esc(c.date || '')}</span>
     </div>`).join('');
 
   el.innerHTML = `
-    <img class="up-thumb" src="${m.img || ''}" alt="${m.title || ''}" loading="lazy"
-      onerror="this.src='';this.alt='📚'">
+    <img class="up-thumb" src="${esc(m.img || '')}" alt="${safeTitle}" loading="lazy"
+      onerror="this.onerror=null;this.style.display='none'">
     <div class="up-info">
       ${typeLabel}
-      <div class="up-title">${m.title || ''}</div>
+      <div class="up-title">${safeTitle}</div>
       <div class="up-chapters">${chapters}</div>
     </div>`;
   el.onclick = () => openDetail(m.slug);
   return el;
 }
 
-function renderCards(gridId, items) {
+/** Delegated click handler for chapter shortcuts inside cards */
+document.addEventListener('click', e => {
+  const ch = e.target.closest('.kc-ch, .up-ch');
+  if (!ch) return;
+  e.stopPropagation();
+  if (ch.dataset.ch) openReader(ch.dataset.ch, ch.dataset.title || '');
+});
+
+function renderCards(gridId, items, { emptyMsg = 'Tidak ada komik' } = {}) {
   const g = $(gridId);
   if (!g) return;
   g.innerHTML = '';
   if (!items || !items.length) {
-    g.innerHTML = `<div class="empty-box" style="padding:3rem">
-      <div class="ei">😕</div><div class="et">Tidak ada komik</div></div>`;
+    g.innerHTML = `<div class="empty-box" style="padding:3rem;grid-column:1/-1">
+      <div class="ei">😕</div><div class="et">${esc(emptyMsg)}</div></div>`;
     return;
   }
   items.forEach(m => g.appendChild(buildCard(m)));
 }
 
-function gridLoading(gridId) {
+const SKEL_CARD = `<div class="skel-card"><div class="skel-img"></div>
+  <div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>`;
+
+function gridLoading(gridId, n = 8) {
   const g = $(gridId);
-  if (!g) return;
-  const skel = `<div class="skel-card"><div class="skel-img"></div>
-    <div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>`;
-  g.innerHTML = skel.repeat(8);
+  if (g) g.innerHTML = SKEL_CARD.repeat(n);
 }
 
-function paginate(pagerId, curPage, total, fn) {
+/* Smart pagination: 1 … 4 5 [6] 7 8 … 20 */
+function paginate(pagerId, curPage, total, fnName) {
   const p = $(pagerId);
   if (!p) return;
-  const pages = [];
-  for (let i = 1; i <= Math.min(total, 20); i++) {
-    pages.push(`<button class="pg-btn${i === curPage ? ' on' : ''}" onclick="(${fn.toString()})(${i})">${i}</button>`);
+  if (total <= 1) { p.innerHTML = ''; return; }
+
+  const parts = [];
+  const push = (label, page, opts = {}) => parts.push(
+    `<button class="pg-btn${opts.cls || ''}" ${opts.dis ? 'disabled' : ''}
+      ${page ? `data-pg="${page}" data-fn="${fnName}"` : ''}>${label}</button>`);
+
+  push('‹', curPage - 1, { dis: curPage <= 1, cls: 'pg-arr' });
+
+  const win = 2;
+  let last = 0;
+  for (let i = 1; i <= total; i++) {
+    if (i === 1 || i === total || Math.abs(i - curPage) <= win) {
+      if (last && i - last > 1) parts.push('<span class="pg-dots">…</span>');
+      push(i, i, { cls: i === curPage ? ' on' : '' });
+      last = i;
+    }
   }
-  p.innerHTML = pages.join('');
+
+  push('›', curPage + 1, { dis: curPage >= total, cls: 'pg-arr' });
+
+  p.innerHTML = parts.join('');
+  p.classList.add('ready');
 }
+
+// Delegated pagination click
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.pg-btn[data-pg]');
+  if (!btn) return;
+  const pg = parseInt(btn.dataset.pg);
+  const fn = window[btn.dataset.fn];
+  if (pg >= 1 && typeof fn === 'function') fn(pg);
+});
 
 /* ─────────────────────────────────────────────────────
    SLIDER
@@ -168,23 +234,23 @@ function initSlider(items) {
 
   slideN = items.length;
   sl.innerHTML = items.map((m, i) => `
-    <div class="feat-slide" data-i="${i}" onclick="openDetail('${m.slug}')">
-      <div class="feat-bg" style="background-image:url('${m.img || ''}')"></div>
+    <div class="feat-slide" data-i="${i}" data-slug="${esc(m.slug)}">
+      <div class="feat-bg" style="background-image:url('${esc(m.img || '')}')"></div>
       <div class="feat-overlay"></div>
       <div class="feat-body">
-        <img class="feat-cover" src="${m.img || ''}" alt="${m.title || ''}" loading="${i === 0 ? 'eager' : 'lazy'}">
+        <img class="feat-cover" src="${esc(m.img || '')}" alt="${esc(m.title || '')}" loading="${i === 0 ? 'eager' : 'lazy'}">
         <div class="feat-info">
-          <div class="feat-tags">${(m.genres || []).slice(0, 3).map(g => `<span class="tag">${g}</span>`).join('')}</div>
-          <h2 class="feat-title">${m.title || ''}</h2>
+          <div class="feat-tags">${(m.genres || []).slice(0, 3).map(g => `<span class="tag">${esc(g)}</span>`).join('')}</div>
+          <h2 class="feat-title">${esc(m.title || '')}</h2>
           <div class="feat-btns">
-            <button class="btn-primary" onclick="event.stopPropagation();openDetail('${m.slug}')">📖 Baca</button>
+            <button class="btn-primary" data-open="${esc(m.slug)}">📖 Baca</button>
           </div>
         </div>
       </div>
     </div>`).join('');
 
   dot.innerHTML = items.map((_, i) =>
-    `<button class="fdot${i === 0 ? ' on' : ''}" onclick="goSlide(${i})"></button>`).join('');
+    `<button class="fdot${i === 0 ? ' on' : ''}" data-slide="${i}"></button>`).join('');
 
   clearInterval(slideTimer);
   slideIdx = 0;
@@ -203,13 +269,24 @@ function goSlide(i) {
 $('feat-prev').addEventListener('click', () => goSlide((slideIdx - 1 + slideN) % slideN));
 $('feat-next').addEventListener('click', () => goSlide((slideIdx + 1) % slideN));
 
+// Slider click delegation (slide / dot / Baca button)
+$('feat-slides').addEventListener('click', e => {
+  const btn = e.target.closest('[data-open]');
+  if (btn) { openDetail(btn.dataset.open); return; }
+  const slide = e.target.closest('.feat-slide');
+  if (slide?.dataset.slug) openDetail(slide.dataset.slug);
+});
+$('feat-dots').addEventListener('click', e => {
+  const d = e.target.closest('[data-slide]');
+  if (d) goSlide(parseInt(d.dataset.slide));
+});
+
 /* ─────────────────────────────────────────────────────
    REKOMENDASI SLIDER — state
 ───────────────────────────────────────────────────── */
-let _rekoAll = [];       // full data for current filter
-let _rekoOffset = 0;     // current slide offset
-let _rekoPerPage = 4;    // cards shown at once
-let _rekoType = 'all';   // current filter
+let _rekoAll = [];
+let _rekoOffset = 0;
+let _rekoPerPage = 4;
 
 function renderRekoSlider() {
   const sl = $('reko-slider');
@@ -217,7 +294,7 @@ function renderRekoSlider() {
   const visible = _rekoAll.slice(_rekoOffset, _rekoOffset + _rekoPerPage);
   sl.innerHTML = '';
   if (!visible.length) {
-    sl.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--txt3);font-size:.85rem">Tidak ada data</div>';
+    sl.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--txt3);font-size:.85rem">Tidak ada data</div>`;
     return;
   }
   visible.forEach(m => sl.appendChild(buildCard(m)));
@@ -225,8 +302,7 @@ function renderRekoSlider() {
 
 if ($('reko-prev')) $('reko-prev').addEventListener('click', () => {
   if (_rekoOffset <= 0) return;
-  _rekoOffset -= _rekoPerPage;
-  if (_rekoOffset < 0) _rekoOffset = 0;
+  _rekoOffset = Math.max(0, _rekoOffset - _rekoPerPage);
   renderRekoSlider();
 });
 
@@ -236,70 +312,90 @@ if ($('reko-next')) $('reko-next').addEventListener('click', () => {
   renderRekoSlider();
 });
 
-// Rekomendasi filter tabs
-$$('#reko-blk .filt').forEach(btn => btn.addEventListener('click', async () => {
-  $$('#reko-blk .filt').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  _rekoType = btn.dataset.reko;
+async function loadReko(type) {
+  const sl = $('reko-slider');
+  if (sl) sl.innerHTML = SKEL_CARD.repeat(4);
   _rekoOffset = 0;
 
-  const sl = $('reko-slider');
-  if (sl) sl.innerHTML = skel(4);
-
-  if (_rekoType === 'all') {
-    // Use home popular/featured
-    const d = await api(`${PROXY}/api/home`);
+  let d;
+  if (type === 'all') {
+    d = await api(`${PROXY}/api/home`);
     _rekoAll = [...(d?.featured || []), ...(d?.popular || [])];
   } else {
-    const d = await api(`${PROXY}/api/list?type=${_rekoType}&order=popular&page=1`);
+    d = await api(`${PROXY}/api/list?type=${encodeURIComponent(type)}&order=popular&page=1`);
     _rekoAll = d?.items || [];
   }
-  // Deduplicate
   const seen = new Set();
   _rekoAll = _rekoAll.filter(m => { if (seen.has(m.slug)) return false; seen.add(m.slug); return true; });
+
+  if (!_rekoAll.length && sl) {
+    sl.innerHTML = `<div style="grid-column:1/-1">${retryBox('Rekomendasi gagal dimuat.')}</div>`;
+    return;
+  }
   renderRekoSlider();
+}
+
+// Rekomendasi filter tabs
+$$('#reko-blk .filt').forEach(btn => btn.addEventListener('click', () => {
+  $$('#reko-blk .filt').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadReko(btn.dataset.reko);
 }));
 
-// Responsive: update cards per page
 function updateRekoPerPage() {
   if (window.innerWidth <= 480) _rekoPerPage = 2;
   else if (window.innerWidth <= 768) _rekoPerPage = 3;
   else _rekoPerPage = 4;
 }
-window.addEventListener('resize', () => { updateRekoPerPage(); renderRekoSlider(); });
+
+let _resizeT;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeT);
+  _resizeT = setTimeout(() => { updateRekoPerPage(); renderRekoSlider(); }, 150);
+});
 
 /* ─────────────────────────────────────────────────────
-   UPDATE TERBARU — state (card grid + pagination)
+   UPDATE TERBARU — card grid + pagination
 ───────────────────────────────────────────────────── */
-let _updatePage = 1;
-
 async function loadUpdateTerbaru(pg = 1) {
-  _updatePage = pg;
   gridLoading('update-grid');
-  
+
+  let d;
   if (pg === 1) {
-    const homeData = await api(`${PROXY}/api/home`);
-    const listData = await api(`${PROXY}/api/list?page=1&order=update`);
-    renderCards('update-grid', homeData?.updates);
-    paginate('update-pager', pg, listData?.totalPages || 1, p => loadUpdateTerbaru(p));
-  } else {
-    const d = await api(`${PROXY}/api/list?page=${pg}&order=update`);
-    renderCards('update-grid', d?.items);
-    paginate('update-pager', pg, d?.totalPages || 1, p => loadUpdateTerbaru(p));
+    // Parallel: home updates (rich, with chapter badges) + page count
+    const [homeData, listData] = await Promise.all([
+      api(`${PROXY}/api/home`),
+      api(`${PROXY}/api/list?page=1&order=update`)
+    ]);
+    d = homeData?.updates?.length ? homeData : listData;
+    const totalPages = homeData?.updates?.length ? (listData?.totalPages || 1) : (listData?.totalPages || 1);
+    renderCards('update-grid', d?.updates || d?.items);
+    paginate('update-pager', 1, totalPages, 'loadUpdateTerbaru');
+    return;
   }
+  d = await api(`${PROXY}/api/list?page=${pg}&order=update`);
+  if (!d?.items?.length) { renderCards('update-grid', null); }
+  renderCards('update-grid', d?.items);
+  paginate('update-pager', pg, d?.totalPages || 1, 'loadUpdateTerbaru');
 }
+window.loadUpdateTerbaru = loadUpdateTerbaru;
 
 /* ─────────────────────────────────────────────────────
    HOME
 ───────────────────────────────────────────────────── */
 async function loadHome() {
   const d = await api(`${PROXY}/api/home`);
-  if (!d) { showToast('Gagal memuat data. Coba refresh.'); return; }
+  if (!d) {
+    const feat = $('featured');
+    if (feat) feat.innerHTML = retryBox('Gagal memuat data utama.');
+    showToast('Gagal memuat data. Coba refresh.');
+    return;
+  }
 
   // Featured slider
   if (d.featured?.length) initSlider(d.featured);
 
-  // Rekomendasi slider
+  // Rekomendasi
   updateRekoPerPage();
   _rekoAll = [...(d.featured || []), ...(d.popular || [])];
   const seen = new Set();
@@ -307,27 +403,30 @@ async function loadHome() {
   _rekoOffset = 0;
   renderRekoSlider();
 
-  // Update Terbaru (card grid + pagination)
-  await loadUpdateTerbaru(1);
-
-  // Terakhir Dibaca
+  // Update Terbaru + Terakhir Dibaca (parallel)
   renderHistory();
+  loadUpdateTerbaru(1);
 
-  // Popular
+  // Popular + Manhwa + Manhua (parallel, don't block each other)
   const pg = $('pop-grid');
   if (pg) {
-    pg.innerHTML = '';
-    (d.popular || []).forEach(m => pg.appendChild(buildCard(m)));
+    if (d.popular?.length) { pg.innerHTML = ''; d.popular.forEach(m => pg.appendChild(buildCard(m))); }
+    else pg.innerHTML = `<div style="grid-column:1/-1">${retryBox('Komik populer gagal dimuat.')}</div>`;
   }
 
-  // Manhwa / Manhua — load from explore
-  const mhw = await api(`${PROXY}/api/list?type=Manhwa&order=popular&page=1`);
-  const mhg = $('manhwa-grid');
-  if (mhg) { mhg.innerHTML = ''; (mhw?.items || []).slice(0, 12).forEach(m => mhg.appendChild(buildCard(m))); }
-
-  const mhu = await api(`${PROXY}/api/list?type=Manhua&order=popular&page=1`);
-  const mug = $('manhua-grid');
-  if (mug) { mug.innerHTML = ''; (mhu?.items || []).slice(0, 12).forEach(m => mug.appendChild(buildCard(m))); }
+  const loadSection = async (gridId, type) => {
+    const g = $(gridId);
+    if (!g) return;
+    const r = await api(`${PROXY}/api/list?type=${type}&order=popular&page=1`);
+    if (r?.items?.length) {
+      g.innerHTML = '';
+      r.items.slice(0, 12).forEach(m => g.appendChild(buildCard(m)));
+    } else {
+      g.innerHTML = `<div style="grid-column:1/-1">${retryBox(`Komik ${type} gagal dimuat.`)}</div>`;
+    }
+  };
+  loadSection('manhwa-grid', 'Manhwa');
+  loadSection('manhua-grid', 'Manhua');
 }
 
 /* ─────────────────────────────────────────────────────
@@ -335,7 +434,7 @@ async function loadHome() {
 ───────────────────────────────────────────────────── */
 function getHistory() {
   try { return JSON.parse(localStorage.getItem('kz_history')) || []; }
-  catch (e) { return []; }
+  catch { return []; }
 }
 
 function saveHistory(mangaSlug, title, img, chapterSlug, chapterTitle) {
@@ -343,7 +442,7 @@ function saveHistory(mangaSlug, title, img, chapterSlug, chapterTitle) {
   h = h.filter(x => x.mangaSlug !== mangaSlug);
   h.unshift({ mangaSlug, title, img, chapterSlug, chapterTitle, time: Date.now() });
   if (h.length > 15) h = h.slice(0, 15);
-  localStorage.setItem('kz_history', JSON.stringify(h));
+  try { localStorage.setItem('kz_history', JSON.stringify(h)); } catch { }
 }
 
 function clearHistory() {
@@ -357,39 +456,44 @@ function renderHistory() {
   const row = $('history-row');
   if (!blk || !row) return;
 
-  if (!h.length) {
-    blk.style.display = 'none';
-    return;
-  }
-
+  if (!h.length) { blk.style.display = 'none'; return; }
   blk.style.display = '';
   row.innerHTML = h.map(x => `
-    <div class="hist-card" onclick="openReader('${x.chapterSlug}','${x.title.replace(/'/g, "\\'")}')">
-      <img class="hist-img" src="${x.img || ''}" loading="lazy" onerror="this.src=''">
+    <div class="hist-card" data-ch="${esc(x.chapterSlug)}">
+      <img class="hist-img" src="${esc(x.img || '')}" loading="lazy" onerror="this.onerror=null;this.style.display='none'">
       <div class="hist-info">
-        <div class="hist-title">${x.title}</div>
-        <div class="hist-ch">${x.chapterTitle}</div>
+        <div class="hist-title">${esc(x.title)}</div>
+        <div class="hist-ch">${esc(x.chapterTitle)}</div>
         <div class="hist-time">Dibaca pada ${new Date(x.time).toLocaleDateString('id-ID')}</div>
       </div>
     </div>
   `).join('');
 }
 
+$('history-row')?.addEventListener('click', e => {
+  const c = e.target.closest('.hist-card');
+  if (c?.dataset.ch) openReader(c.dataset.ch, '');
+});
 $('clear-history')?.addEventListener('click', clearHistory);
 
 /* ─────────────────────────────────────────────────────
    EXPLORE
 ───────────────────────────────────────────────────── */
 async function loadExplore(pg = 1) {
-  expPage = pg;
   gridLoading('exp-grid');
   let url = `${PROXY}/api/list?page=${pg}&order=${expSort}`;
   if (expType) url += `&type=${encodeURIComponent(expType)}`;
   if (expStatus) url += `&status=${encodeURIComponent(expStatus)}`;
   const d = await api(url);
-  renderCards('exp-grid', d?.items);
-  paginate('exp-pager', pg, d?.totalPages || 1, p => loadExplore(p));
+  if (!d) {
+    $('exp-grid').innerHTML = retryBox('Daftar komik gagal dimuat.');
+    $('exp-pager').innerHTML = '';
+    return;
+  }
+  renderCards('exp-grid', d.items, { emptyMsg: 'Tidak ada komik dengan filter ini' });
+  paginate('exp-pager', pg, d.totalPages || 1, 'loadExplore');
 }
+window.loadExplore = loadExplore;
 
 $$('#pg-explore .filt').forEach(b => b.addEventListener('click', () => {
   $$('#pg-explore .filt').forEach(x => x.classList.remove('active'));
@@ -402,14 +506,19 @@ $('exp-status').addEventListener('change', () => { expStatus = $('exp-status').v
    TOP
 ───────────────────────────────────────────────────── */
 async function loadTop(pg = 1) {
-  topPage = pg;
   gridLoading('top-grid');
   let url = `${PROXY}/api/top?page=${pg}`;
   if (topType) url += `&type=${encodeURIComponent(topType)}`;
   const d = await api(url);
-  renderCards('top-grid', d?.items);
-  paginate('top-pager', pg, d?.totalPages || 1, p => loadTop(p));
+  if (!d) {
+    $('top-grid').innerHTML = retryBox('Top komik gagal dimuat.');
+    $('top-pager').innerHTML = '';
+    return;
+  }
+  renderCards('top-grid', d.items);
+  paginate('top-pager', pg, d.totalPages || 1, 'loadTop');
 }
+window.loadTop = loadTop;
 
 $$('#pg-top .filt').forEach(b => b.addEventListener('click', () => {
   $$('#pg-top .filt').forEach(x => x.classList.remove('active'));
@@ -420,12 +529,17 @@ $$('#pg-top .filt').forEach(b => b.addEventListener('click', () => {
    ALL SERIES
 ───────────────────────────────────────────────────── */
 async function loadAllSeries(pg = 1) {
-  allPage = pg;
   gridLoading('all-grid');
   const d = await api(`${PROXY}/api/list?page=${pg}&order=title`);
-  renderCards('all-grid', d?.items);
-  paginate('all-pager', pg, d?.totalPages || 1, p => loadAllSeries(p));
+  if (!d) {
+    $('all-grid').innerHTML = retryBox('Daftar seri gagal dimuat.');
+    $('all-pager').innerHTML = '';
+    return;
+  }
+  renderCards('all-grid', d.items);
+  paginate('all-pager', pg, d.totalPages || 1, 'loadAllSeries');
 }
+window.loadAllSeries = loadAllSeries;
 
 $$('#pg-allseries .filt').forEach(b => b.addEventListener('click', () => {
   $$('#pg-allseries .filt').forEach(x => x.classList.remove('active'));
@@ -435,72 +549,94 @@ $$('#pg-allseries .filt').forEach(b => b.addEventListener('click', () => {
 /* ─────────────────────────────────────────────────────
    GENRE PAGE
 ───────────────────────────────────────────────────── */
-function buildGenreTiles() {
+async function buildGenreTiles() {
   const grid = $('genre-grid');
   if (!grid) return;
-  grid.innerHTML = GENRES_DEFAULT.map(g => `
-    <div class="genre-tile" onclick="loadGenre('${g.slug}','${g.name}',1);navigate('genreview')">
-      <span class="genre-icon">${g.icon}</span>
-      <span class="genre-name">${g.name}</span>
+
+  let list = [];
+  const d = await api(`${PROXY}/api/genres`);
+  if (d?.genres?.length) list = d.genres;
+  else list = GENRES_DEFAULT; // offline fallback
+
+  const iconFor = name => (GENRES_DEFAULT.find(g => g.name.toLowerCase() === name.toLowerCase()) || {}).icon || '📚';
+
+  grid.innerHTML = list.map(g => `
+    <div class="genre-tile" data-gslug="${esc(g.slug)}" data-gname="${esc(g.name)}">
+      <span class="genre-icon">${iconFor(g.name)}</span>
+      <span class="genre-name">${esc(g.name)}</span>
     </div>`).join('');
+
+  grid.onclick = e => {
+    const t = e.target.closest('.genre-tile');
+    if (t) loadGenre(t.dataset.gslug, t.dataset.gname, 1);
+  };
 }
 
 async function loadGenre(slug, name, pg = 1) {
-  gSlug = slug; gName = name; gPage = pg;
   navigate('genreview');
   const ht = $('genre-view-title');
-  if (ht) ht.textContent = `${name}`;
-  gridLoading('genre-view-grid');
-  const d = await api(`${PROXY}/api/genre/${slug}?page=${pg}`);
-  renderCards('genre-view-grid', d?.items);
-  paginate('genre-view-pager', pg, d?.totalPages || 1, p => loadGenre(slug, name, p));
+  if (ht) ht.textContent = name;
+  gridLoading('genre-view-grid', 12);
+  const d = await api(`${PROXY}/api/genre/${encodeURIComponent(slug)}?page=${pg}`);
+  if (!d) {
+    $('genre-view-grid').innerHTML = retryBox(`Komik genre "${name}" gagal dimuat.`);
+    $('genre-view-pager').innerHTML = '';
+    return;
+  }
+  renderCards('genre-view-grid', d.items);
+  paginate('genre-view-pager', pg, d.totalPages || 1, 'loadGenreCb');
 }
+window.loadGenreCb = (pg) => loadGenre(gSlug, gName, pg);
+
+let gSlug = '', gName = '';
 
 /* ─────────────────────────────────────────────────────
    DETAIL PAGE
 ───────────────────────────────────────────────────── */
 async function openDetail(slug) {
+  if (!slug) return;
   prevPg = curPg;
   navigate('detail');
   const root = $('detail-root');
-  root.innerHTML = `<div style="display:flex;justify-content:center;padding:5rem"><div class="spin"></div></div>`;
+  root.innerHTML = `<div class="detail-loading"><div class="spin"></div><p>Memuat detail komik…</p></div>`;
 
   const d = await api(`${PROXY}/api/manga/${encodeURIComponent(slug)}`);
   if (!d || !d.title) {
     root.innerHTML = `<div class="empty-box" style="padding:5rem">
       <div class="ei">😢</div><div class="et">Gagal memuat komik</div>
-      <div class="es">Coba lagi nanti</div></div>`;
+      <div class="es">Sumber data mungkin sibuk. Silakan coba lagi.</div>
+      <button class="btn-primary" style="margin-top:1rem" onclick="openDetail('${esc(slug)}')">🔄 Coba Lagi</button>
+      <button class="btn-primary" style="margin-top:1rem;background:transparent;color:inherit" onclick="navigate('${prevPg}')">← Kembali</button>
+    </div>`;
     return;
   }
 
   const scCol = '#a855f7';
-  const authors = d.author || '-';
   const syn = d.synopsis || 'Sinopsis tidak tersedia.';
 
   root.innerHTML = `
     <button class="detail-back" onclick="navigate('${prevPg}')">← Kembali</button>
 
     <div class="d-hero">
-      <div class="d-bg" style="background-image:url('${d.img}')"></div>
+      <div class="d-bg" style="background-image:url('${esc(d.img || '')}')"></div>
       <div class="d-fog"></div>
       <div class="d-wrap">
-        <img class="d-cover" src="${d.img || ''}" alt="${d.title}" loading="lazy"
-          onerror="this.src='';this.alt='No Image'">
+        <img class="d-cover" src="${esc(d.img || '')}" alt="${esc(d.title)}" loading="lazy"
+          onerror="this.onerror=null;this.style.display='none'">
         <div class="d-info">
-          <h1 class="d-title">${d.title}</h1>
-          ${d.altTitle ? `<div class="d-alt">${d.altTitle}</div>` : ''}
+          <h1 class="d-title">${esc(d.title)}</h1>
+          ${d.altTitle ? `<div class="d-alt">${esc(d.altTitle)}</div>` : ''}
           <div class="d-tags">
-            ${d.type ? `<span class="tag t-${(d.type || '').toLowerCase()}">${d.type}</span>` : ''}
-            ${d.status ? `<span class="tag ${d.status.toLowerCase().includes('ongoing') ? 't-on' : 't-end'}">${d.status}</span>` : ''}
-            ${(d.genres || []).slice(0, 3).map(g => `<span class="tag t-genre">${g}</span>`).join('')}
+            ${d.type ? `<span class="tag t-${esc(d.type.toLowerCase())}">${esc(d.type)}</span>` : ''}
+            ${d.status ? `<span class="tag ${d.status.toLowerCase().includes('ongoing') ? 't-on' : 't-end'}">${esc(d.status)}</span>` : ''}
+            ${(d.genres || []).slice(0, 3).map(g => `<span class="tag t-genre">${esc(g)}</span>`).join('')}
           </div>
           <div class="d-stats">
-            ${d.score ? `<div class="d-stat"><div class="d-val sc" style="color:${scCol}">★ ${d.score}</div><div class="d-lbl-s">Score</div></div>` : ''}
+            ${d.score ? `<div class="d-stat"><div class="d-val sc" style="color:${scCol}">★ ${esc(d.score)}</div><div class="d-lbl-s">Score</div></div>` : ''}
             ${(d.chapters || []).length ? `<div class="d-stat"><div class="d-val">${d.chapters.length}</div><div class="d-lbl-s">Chapter</div></div>` : ''}
           </div>
           <div style="margin-top:12px">
-            <button class="btn-primary" id="d-read-btn" onclick="startReadFirst()"
-              ${(d.chapters || []).length ? '' : 'disabled style="opacity:.4"'}>
+            <button class="btn-primary" id="d-read-btn">
               📖 ${(d.chapters || []).length ? 'Baca Chapter Terbaru' : 'Tidak Ada Chapter'}
             </button>
           </div>
@@ -510,11 +646,10 @@ async function openDetail(slug) {
 
     <div class="d-body">
       <div>
-        <div class="d-synopsis"><h3>Sinopsis</h3><p>${syn}</p></div>
+        <div class="d-synopsis"><h3>Sinopsis</h3><p>${esc(syn)}</p></div>
         ${(d.genres || []).length ? `
         <div class="d-genre-tags">
-          ${d.genres.map(g => `<span class="d-gtag"
-            onclick="loadGenre('${g.toLowerCase().replace(/\s+/g, '-')}','${g.replace(/'/g, "\\'")}',1)">${g}</span>`).join('')}
+          ${d.genres.map(g => `<span class="d-gtag" data-gslug="${esc(g.toLowerCase().replace(/\s+/g, '-'))}" data-gname="${esc(g)}">${esc(g)}</span>`).join('')}
         </div>` : ''}
       </div>
       <div class="d-card">
@@ -534,8 +669,15 @@ async function openDetail(slug) {
       </div>
     </div>`;
 
-  const clist = $('detail-chapters');
-  if (clist) clist.innerHTML = buildChapterList(d.chapters || [], slug);
+  // Wire up interactions
+  $('d-read-btn')?.addEventListener('click', startReadFirst);
+  const readBtn = $('d-read-btn');
+  if (readBtn && !(d.chapters || []).length) {
+    readBtn.disabled = true;
+    readBtn.style.opacity = '.4';
+  }
+  root.querySelectorAll('.d-gtag').forEach(t => t.addEventListener('click', () =>
+    loadGenre(t.dataset.gslug, t.dataset.gname, 1)));
 
   _curChapters = (d.chapters || []).map(c => ({ slug: c.slug, title: c.title, date: c.date }));
   _curTitle = d.title;
@@ -545,61 +687,59 @@ async function openDetail(slug) {
 
 function dRow(l, v) {
   if (!v || v === '-') return '';
-  return `<div class="d-row"><span class="d-rl">${l}</span><span class="d-rv">${v}</span></div>`;
+  return `<div class="d-row"><span class="d-rl">${esc(l)}</span><span class="d-rv">${esc(v)}</span></div>`;
 }
 
-// Build chapter list with range filter tabs (Ch 1-50, 51-100, etc.)
+// Build chapter list with range tabs (Ch 1–50, 51–100, etc.)
 // Server returns newest first, so we reverse to show Ch 1 at top
 function buildChapterList(chapters, mangaSlug) {
   if (!chapters.length) return `<div class="ch-empty">📭 Belum ada chapter tersedia.</div>`;
 
-  const key = mangaSlug || '_cur';
-  // Reverse: server sends newest→oldest, we want oldest→newest (Ch 1 first)
-  const sorted = [...chapters].reverse();
+  const key = (mangaSlug || '_cur').replace(/[^a-z0-9-]/gi, '');
+  const sorted = [...chapters].reverse(); // oldest → newest
 
   const renderItem = (c) => `
-    <div class="ch-item" onclick="openReader('${c.slug}','${(_curTitle || '').replace(/'/g, "\\'")}')">
-      <span class="ch-num">${c.title || 'Chapter'}</span>
+    <div class="ch-item" data-ch="${esc(c.slug)}">
+      <span class="ch-num">${esc(c.title || 'Chapter')}</span>
       <span class="ch-title-txt"></span>
-      <span class="ch-date">${c.date || ''}</span>
+      <span class="ch-date">${esc(c.date || '')}</span>
       <button class="ch-read-btn">📖 Baca</button>
     </div>`;
 
   const RANGE = 50;
   const totalRanges = Math.ceil(sorted.length / RANGE);
 
-  // If chapters fit in one range (≤50), just render them all without tabs
   if (totalRanges <= 1) {
-    return sorted.map(renderItem).join('');
+    return `<div class="ch-range-panel" id="chr-${key}-0">${sorted.map(renderItem).join('')}</div>`;
   }
 
-  // Build range tabs
   const tabs = Array.from({ length: totalRanges }, (_, i) => {
     const start = i * RANGE + 1;
     const end = Math.min((i + 1) * RANGE, sorted.length);
-    const label = `Ch ${start}–${end}`;
-    return `<button class="ch-range-btn${i === 0 ? ' active' : ''}" onclick="showChapterRange('${key}',${i})">${label}</button>`;
+    return `<button class="ch-range-btn${i === 0 ? ' active' : ''}" data-rkey="${key}" data-ridx="${i}">Ch ${start}–${end}</button>`;
   }).join('');
 
-  // Build content panels per range
-  const panels = Array.from({ length: totalRanges }, (_, i) => {
-    const rangeItems = sorted.slice(i * RANGE, (i + 1) * RANGE).map(renderItem).join('');
-    return `<div class="ch-range-panel${i === 0 ? '' : ' hidden'}" id="chr-${key}-${i}">${rangeItems}</div>`;
-  }).join('');
+  const panels = Array.from({ length: totalRanges }, (_, i) =>
+    `<div class="ch-range-panel${i === 0 ? '' : ' hidden'}" id="chr-${key}-${i}">${sorted.slice(i * RANGE, (i + 1) * RANGE).map(renderItem).join('')}</div>`
+  ).join('');
 
   return `<div class="ch-range-tabs" id="chrt-${key}">${tabs}</div>${panels}`;
 }
 
-function showChapterRange(key, idx) {
-  // Hide all panels for this manga
-  document.querySelectorAll(`[id^="chr-${key}-"]`).forEach(el => el.classList.add('hidden'));
-  document.getElementById(`chr-${key}-${idx}`)?.classList.remove('hidden');
-  // Update active tab
-  const tabBar = document.getElementById(`chrt-${key}`);
-  if (tabBar) {
-    tabBar.querySelectorAll('.ch-range-btn').forEach((btn, i) => btn.classList.toggle('active', i === idx));
+// Delegated: chapter range tabs + chapter items
+document.addEventListener('click', e => {
+  const tab = e.target.closest('.ch-range-btn');
+  if (tab) {
+    const key = tab.dataset.rkey, idx = tab.dataset.ridx;
+    document.querySelectorAll(`[id^="chr-${key}-"]`).forEach(el => el.classList.add('hidden'));
+    $(`chr-${key}-${idx}`)?.classList.remove('hidden');
+    const tabBar = document.getElementById(`chrt-${key}`);
+    tabBar?.querySelectorAll('.ch-range-btn').forEach((b, i) => b.classList.toggle('active', String(i) === String(idx)));
+    return;
   }
-}
+  const item = e.target.closest('.ch-item');
+  if (item?.dataset.ch) openReader(item.dataset.ch, _curTitle);
+});
 
 /* ─────────────────────────────────────────────────────
    READER
@@ -618,26 +758,22 @@ function startReadFirst() {
 }
 
 async function openReader(chSlug, title) {
+  if (!chSlug) return;
   navigate('reader');
 
-  // If _curChapters is empty (e.g. opened from history / update-row without visiting detail),
-  // try to infer the manga slug from the chapter slug and fetch chapters on-the-fly.
-  if (!_curChapters.length && chSlug) {
-    const pages = $('reader-pages');
-    pages.innerHTML = `<div class="reader-loading"><div class="spin"></div><p>Memuat data chapter…</p></div>`;
+  const pages = $('reader-pages');
+  pages.innerHTML = `<div class="reader-loading"><div class="spin"></div><p>Memuat data chapter…</p></div>`;
 
-    // Chapter slug format: "manga-title-chapter-N" → manga slug = strip last "-chapter-N" part
-    const mangaSlugGuess = chSlug.replace(/-chapter-[\d-]+$/i, '');
-    try {
-      const md = await api(`${PROXY}/api/manga/${encodeURIComponent(mangaSlugGuess)}`);
-      if (md && md.chapters && md.chapters.length) {
-        _curChapters = md.chapters.map(c => ({ slug: c.slug, title: c.title, date: c.date }));
-        _curTitle = md.title || title || '';
-        _curImg = md.img || '';
-        _curMangaSlug = mangaSlugGuess;
-      }
-    } catch (e) {
-      console.warn('Could not fetch manga for chapter context:', e);
+  // If _curChapters is empty (opened from history/cards without visiting detail),
+  // infer the manga slug from the chapter slug and fetch chapters on-the-fly.
+  if (!_curChapters.length && chSlug) {
+    const mangaSlugGuess = chSlug.replace(/-chapter-[\d.-]+$/i, '');
+    const md = await api(`${PROXY}/api/manga/${encodeURIComponent(mangaSlugGuess)}`);
+    if (md && md.chapters && md.chapters.length) {
+      _curChapters = md.chapters.map(c => ({ slug: c.slug, title: c.title, date: c.date }));
+      _curTitle = md.title || title || '';
+      _curImg = md.img || '';
+      _curMangaSlug = mangaSlugGuess;
     }
   }
 
@@ -646,7 +782,6 @@ async function openReader(chSlug, title) {
 
   const ch = _curChapters[_rChIdx] || { slug: chSlug, title: 'Chapter' };
   $('r-title').textContent = `${title || _curTitle || ''} — ${ch.title || 'Chapter'}`;
-  $('r-ch-info').textContent = _curChapters.length ? `${_rChIdx + 1} / ${_curChapters.length}` : '...';
 
   if (_curMangaSlug && ch.slug) {
     saveHistory(_curMangaSlug, _curTitle, _curImg, ch.slug, ch.title || 'Chapter');
@@ -654,34 +789,43 @@ async function openReader(chSlug, title) {
 
   // Counter 15 chapter
   _chReadCount++;
-  localStorage.setItem('kz_ch_read', _chReadCount.toString());
-  if (_chReadCount % 15 === 0) {
-    showTrakteerPopup();
-  }
+  try { localStorage.setItem('kz_ch_read', _chReadCount.toString()); } catch { }
+  if (_chReadCount % 15 === 0) showTrakteerPopup();
 
-  const pages = $('reader-pages');
   pages.innerHTML = `<div class="reader-loading"><div class="spin"></div><p>Memuat gambar chapter…</p></div>`;
 
-  // Call proxy to get chapter images
-  const d = await fetch(`${PROXY}/api/chapter?slug=${encodeURIComponent(chSlug)}`).then(r => r.json()).catch(() => null);
+  const d = await api(`${PROXY}/api/chapter?slug=${encodeURIComponent(chSlug)}`);
   const imgs = d?.images || [];
 
   if (!imgs.length) {
     pages.innerHTML = `<div class="reader-error">
       <span class="ei">😢</span>
       <h3>Gambar tidak tersedia</h3>
-      <p>Chapter ini belum bisa dimuat. Coba chapter lain atau kembali ke detail.</p>
-      <button class="btn-primary" onclick="navigate('detail')">← Kembali ke Detail</button>
+      <p>Chapter ini belum bisa dimuat. Coba lagi atau pilih chapter lain.</p>
+      <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap">
+        <button class="btn-primary" onclick="openReader('${esc(chSlug)}','${esc(title || _curTitle || '')}')">🔄 Coba Lagi</button>
+        <button class="btn-primary" style="background:transparent;color:inherit" onclick="navigate('detail')">← Kembali ke Detail</button>
+      </div>
     </div>`;
     return;
   }
 
   pages.innerHTML = imgs.map((src, i) =>
     `<div class="r-page">
-      <img src="${src}" alt="Halaman ${i + 1}" loading="${i < 3 ? 'eager' : 'lazy'}"
-        onerror="this.parentElement.innerHTML='<div style=padding:2rem;text-align:center;color:#555>Gagal memuat halaman ${i + 1}</div>'">
+      <img src="${esc(src)}" alt="Halaman ${i + 1}" loading="${i < 3 ? 'eager' : 'lazy'}">
     </div>`
   ).join('');
+
+  // Placeholder while each image loads; swap to error msg on failure
+  let loaded = 0;
+  pages.querySelectorAll('.r-page img').forEach(img => {
+    const pageEl = img.parentElement;
+    img.addEventListener('load', () => { loaded++; img.classList.add('loaded'); });
+    img.addEventListener('error', () => {
+      img.remove();
+      pageEl.innerHTML = `<div class="r-page-err" data-retry="${esc(img.src)}">⚠️ Gagal memuat halaman ini. <span class="r-retry" role="button">Coba lagi</span></div>`;
+    });
+  });
 
   updateReaderNav();
   window.scrollTo({ top: 0 });
@@ -709,6 +853,18 @@ $('r-prev-ch').addEventListener('click', () => goReaderChapter(-1));
 $('r-next-ch').addEventListener('click', () => goReaderChapter(+1));
 $('rnav-prev').addEventListener('click', () => goReaderChapter(-1));
 $('rnav-next').addEventListener('click', () => goReaderChapter(+1));
+
+// Retry a single failed reader page
+$('reader-pages').addEventListener('click', e => {
+  const errBox = e.target.closest('.r-page-err');
+  if (!errBox) return;
+  const src = errBox.dataset.retry;
+  errBox.innerHTML = `<img src="${esc(src)}" alt="Halaman">`;
+  const img = errBox.querySelector('img');
+  img.addEventListener('error', () => {
+    errBox.innerHTML = `<div class="r-page-err" data-retry="${esc(src)}">⚠️ Gagal memuat halaman ini. <span class="r-retry" role="button">Coba lagi</span></div>`;
+  });
+});
 
 let _rFitWide = false;
 $('r-fit-toggle').addEventListener('click', () => {
@@ -751,19 +907,29 @@ async function doSearch(q) {
   dd.classList.add('open');
 
   const d = await api(`${PROXY}/api/search?q=${encodeURIComponent(q)}`);
-  if (!d?.items?.length) {
+  if (!d) {
+    dd.innerHTML = `<div style="padding:.85rem;text-align:center;font-size:.8rem;color:#555">Pencarian gagal. Coba lagi.</div>`;
+    return;
+  }
+  if (!d.items?.length) {
     dd.innerHTML = `<div style="padding:.85rem;text-align:center;font-size:.8rem;color:#555">Tidak ditemukan</div>`;
     return;
   }
   dd.innerHTML = d.items.map(m => `
-    <div class="sd-row" onclick="$('search-drop').classList.remove('open');$('q').value='';openDetail('${m.slug}')">
-      ${m.img ? `<img class="sd-img" src="${m.img}" alt="${m.title}">` : '<div class="sd-img"></div>'}
+    <div class="sd-row" data-slug="${esc(m.slug)}">
+      ${m.img ? `<img class="sd-img" src="${esc(m.img)}" alt="${esc(m.title)}">` : '<div class="sd-img"></div>'}
       <div style="flex:1;min-width:0">
-        <div class="sd-name">${m.title}</div>
-        <div class="sd-sub">${m.type || ''}</div>
+        <div class="sd-name">${esc(m.title)}</div>
+        <div class="sd-sub">${esc(m.type || '')}</div>
       </div>
-      ${m.score ? `<div class="sd-sc">⭐ ${m.score}</div>` : ''}
+      ${m.score ? `<div class="sd-sc">⭐ ${esc(m.score)}</div>` : ''}
     </div>`).join('');
+
+  dd.querySelectorAll('.sd-row').forEach(row => row.addEventListener('click', () => {
+    dd.classList.remove('open');
+    $('q').value = '';
+    openDetail(row.dataset.slug);
+  }));
 }
 
 /* ─────────────────────────────────────────────────────
@@ -805,14 +971,7 @@ function navigate(name) {
 
   const reading = name === 'reader';
   const bnav = document.querySelector('.bnav');
-  if (bnav) {
-    if (reading) {
-      bnav.style.display = 'none';
-    } else {
-      // Let CSS handle visibility (mobile: flex, desktop: none)
-      bnav.style.display = '';
-    }
-  }
+  if (bnav) bnav.style.display = reading ? 'none' : '';
   document.querySelector('.navbar').style.display = reading ? 'none' : '';
   $('main').style.paddingTop = reading ? '0' : '';
 

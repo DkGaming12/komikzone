@@ -1414,6 +1414,75 @@ body {
   cursor: not-allowed;
 }
 
+/* Pagination ellipsis */
+.pg-dots {
+  min-width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--txt3);
+  font-size: .82rem;
+}
+
+/* Detail page loading */
+.detail-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 6rem 1rem;
+  color: var(--txt3);
+  font-size: .9rem;
+}
+
+/* Card thumb fallback when image fails */
+.kc-thumb.noimg::after {
+  content: '📚';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  background: var(--bg4);
+}
+
+/* Reader page: shimmer placeholder while image loads */
+.r-page {
+  position: relative;
+  min-height: 200px;
+  background: linear-gradient(100deg, var(--bg3) 40%, var(--bg4) 50%, var(--bg3) 60%);
+  background-size: 200% 100%;
+  animation: rpage-shimmer 1.4s ease infinite;
+}
+
+@keyframes rpage-shimmer {
+  to { background-position: -200% 0; }
+}
+
+.r-page img.loaded {
+  animation: none;
+  min-height: 0;
+}
+
+.r-page-err {
+  padding: 2rem;
+  text-align: center;
+  color: var(--txt3);
+  font-size: .88rem;
+}
+
+.r-retry {
+  color: var(--purple);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.r-retry:hover {
+  opacity: .8;
+}
+
 /* ============ GENRE ============ */
 .genre-grid {
   max-width: 960px;
