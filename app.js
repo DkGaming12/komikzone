@@ -469,6 +469,7 @@ function renderSidebar(d) {
       ns.innerHTML = `<div class="sw-empty">Series baru tidak tersedia.</div>`;
     }
   }
+  adjustSideSticky();
 }
 
 function renderWpop(range) {
@@ -512,6 +513,22 @@ $('ns-list')?.addEventListener('click', e => {
   if (it?.dataset.slug) openDetail(it.dataset.slug);
 });
 
+/* Sticky sidebar: if taller than the viewport, anchor its bottom to the
+   viewport bottom instead of its top — so the whole sidebar scrolls into
+   view first, then sticks (like komikkita). */
+function adjustSideSticky() {
+  const side = document.querySelector('.home-side');
+  if (!side) return;
+  if (window.innerWidth <= 1024) { side.style.top = ''; return; }
+  const navH = document.querySelector('#navbar')?.offsetHeight || 0;
+  const h = side.offsetHeight;
+  const gap = 12;
+  const top = Math.min(navH + gap, window.innerHeight - h - gap);
+  side.style.top = `${top}px`;
+}
+window.addEventListener('resize', adjustSideSticky);
+window.addEventListener('load', adjustSideSticky);
+
 /* ─────────────────────────────────────────────────────
    GENRE QUICK STRIP (below hero, like komikkita)
 ───────────────────────────────────────────────────── */
@@ -541,6 +558,7 @@ async function renderGenreStrip() {
       `<button class="sg-link" data-gslug="${esc(g.slug)}" data-gname="${esc(g.name)}">${esc(g.name)}</button>`
     ).join('');
   }
+  adjustSideSticky();
 }
 
 $('genre-strip-inner')?.addEventListener('click', e => {
@@ -1144,13 +1162,24 @@ function initPopup() {
   const popup = $('trakteer-popup');
   if (!popup) return;
 
-  // Muncul setiap refresh/load halaman (delay 3 detik)
-  setTimeout(() => showTrakteerPopup(), 3000);
+  // Muncul maksimal 1x per 24 jam — overlay full-screen memblokir semua
+  // klik (termasuk filter), jadi jangan dimunculkan di setiap load.
+  const KEY = 'kz_popup_last';
+  const DAY = 24 * 60 * 60 * 1000;
+  let last = 0;
+  try { last = +(localStorage.getItem(KEY) || 0); } catch {}
+  if (Date.now() - last < DAY) return;
+
+  setTimeout(() => {
+    showTrakteerPopup();
+    try { localStorage.setItem(KEY, String(Date.now())); } catch {}
+  }, 3000);
 
   const hide = () => popup.classList.remove('show');
   $('popup-close')?.addEventListener('click', hide);
   $('popup-btn')?.addEventListener('click', hide);
   popup.addEventListener('click', e => { if (e.target === popup) hide(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
 }
 
 /* ─────────────────────────────────────────────────────
