@@ -515,6 +515,13 @@ body {
   flex-shrink: 0;
   box-shadow: 0 14px 45px rgba(0, 0, 0, .9), 0 0 0 1px rgba(255, 255, 255, .08);
   border: 2px solid rgba(255, 255, 255, .14);
+  background: var(--bg4);
+  opacity: 0;
+  transition: opacity .5s ease;
+}
+
+.feat-cover.ld {
+  opacity: 1;
 }
 
 .feat-info {
@@ -912,9 +919,30 @@ body {
   width: 44px;
   height: 58px;
   border-radius: 6px;
-  object-fit: cover;
   flex-shrink: 0;
+  overflow: hidden;
+  background: linear-gradient(110deg, var(--bg3) 30%, var(--bg5) 45%, var(--bg3) 60%);
+  background-size: 220% 100%;
+  animation: kcshimmer 1.5s linear infinite;
+}
+
+.wp-thumb.loaded,
+.wp-thumb.noimg {
+  animation: none;
   background: var(--bg4);
+}
+
+.wp-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity .4s ease;
+}
+
+.wp-thumb.loaded img {
+  opacity: 1;
 }
 
 .wp-info {
@@ -997,9 +1025,30 @@ body {
   width: 44px;
   height: 58px;
   border-radius: 6px;
-  object-fit: cover;
   flex-shrink: 0;
+  overflow: hidden;
+  background: linear-gradient(110deg, var(--bg3) 30%, var(--bg5) 45%, var(--bg3) 60%);
+  background-size: 220% 100%;
+  animation: kcshimmer 1.5s linear infinite;
+}
+
+.ns-thumb.loaded,
+.ns-thumb.noimg {
+  animation: none;
   background: var(--bg4);
+}
+
+.ns-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity .4s ease;
+}
+
+.ns-thumb.loaded img {
+  opacity: 1;
 }
 
 .ns-info {
@@ -1498,6 +1547,50 @@ body {
   position: relative;
   aspect-ratio: 2/3;
   overflow: hidden;
+  /* shimmer placeholder terlihat sementara cover lazy-loading,
+     jadi card tidak tampak "kosong" saat scroll cepat */
+  background: linear-gradient(110deg, var(--bg3) 30%, var(--bg5) 45%, var(--bg3) 60%);
+  background-size: 220% 100%;
+  animation: kcshimmer 1.5s linear infinite;
+}
+
+.kc-thumb.loaded {
+  animation: none;
+  background: var(--bg4);
+}
+
+@keyframes kcshimmer {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
+}
+
+.kc-thumb.noimg {
+  animation: none;
+  background: linear-gradient(145deg, #1b1630, #131c2e);
+}
+
+/* bottom scrim so type/score badges stay readable over artwork */
+.kc-thumb::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 42px;
+  background: linear-gradient(0deg, rgba(0, 0, 0, .6), transparent);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.kc-thumb.noimg::after {
+  content: '📖';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  opacity: .5;
 }
 
 .kc-img {
@@ -1505,7 +1598,13 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform var(--t2);
+  opacity: 0;
+  transition: opacity .45s ease, transform var(--t2);
+}
+
+.kc-thumb.loaded .kc-img,
+.kc-thumb.noimg .kc-img {
+  opacity: 1;
 }
 
 .komik-card:hover .kc-img {
@@ -1545,12 +1644,15 @@ body {
 
 .kc-type {
   position: absolute;
-  top: 6px;
+  bottom: 6px;
   left: 6px;
-  padding: 2px 6px;
+  padding: 2px 7px;
   border-radius: 4px;
   font-size: .6rem;
   font-weight: 700;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, .4);
+  z-index: 2;
 }
 
 .kc-score {
@@ -1567,6 +1669,7 @@ body {
   display: flex;
   align-items: center;
   gap: 2px;
+  z-index: 2;
 }
 
 .kc-status {
@@ -1819,18 +1922,6 @@ body {
   padding: 6rem 1rem;
   color: var(--txt3);
   font-size: .9rem;
-}
-
-/* Card thumb fallback when image fails */
-.kc-thumb.noimg::after {
-  content: '📚';
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2.2rem;
-  background: var(--bg4);
 }
 
 /* Rank badge (top-3 accent) */

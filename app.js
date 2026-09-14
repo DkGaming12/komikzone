@@ -126,7 +126,8 @@ function buildCard(m, opts = {}) {
   el.innerHTML = `
     <div class="kc-thumb">
       <img class="kc-img" src="${esc(m.img || '')}" alt="${safeTitle}" loading="lazy"
-        onerror="this.onerror=null;this.parentElement.classList.add('noimg');this.remove()">
+        onload="this.parentElement.classList.add('loaded')"
+        onerror="this.onerror=null;this.parentElement.classList.add('noimg','loaded');this.remove()">
       ${rank}${typeLabel}${score}
       <div class="kc-ov"><div class="kc-play">▶</div></div>
     </div>
@@ -241,7 +242,7 @@ function initSlider(items) {
       <div class="feat-bg" style="background-image:url('${esc(m.banner || m.img || '')}')"></div>
       <div class="feat-overlay"></div>
       <div class="feat-body">
-        ${m.img ? `<img class="feat-cover" src="${esc(m.img)}" alt="${esc(m.title || '')}" loading="${i === 0 ? 'eager' : 'lazy'}">` : ''}
+        ${m.img ? `<img class="feat-cover" src="${esc(m.img)}" alt="${esc(m.title || '')}" loading="${i === 0 ? 'eager' : 'lazy'}" onload="this.classList.add('ld')" onerror="this.onerror=null;this.classList.add('ld')">` : ''}
         <div class="feat-info">
           <div class="feat-tags">
             ${m.score ? `<span class="tag t-score">★ ${esc(m.score)}</span>` : ''}
@@ -458,8 +459,9 @@ function renderSidebar(d) {
     if (d?.newSeries?.length) {
       ns.innerHTML = d.newSeries.map(m => `
         <div class="ns-item" data-slug="${esc(m.slug)}">
-          <img class="ns-thumb" src="${esc(m.img || '')}" alt="${esc(m.title)}" loading="lazy"
-            onerror="this.onerror=null;this.remove()">
+          <div class="ns-thumb"><img src="${esc(m.img || '')}" alt="${esc(m.title)}" loading="lazy"
+            onload="this.parentElement.classList.add('loaded')"
+            onerror="this.onerror=null;this.parentElement.classList.add('noimg','loaded');this.remove()"></div>
           <div class="ns-info">
             <div class="ns-title">${esc(m.title)}</div>
             <div class="ns-meta">${(m.genres || []).map(esc).join(' · ')}${m.year ? ` · ${esc(m.year)}` : ''}</div>
@@ -480,8 +482,9 @@ function renderWpop(range) {
     ? list.map(m => `
       <div class="wpop-item" data-slug="${esc(m.slug)}">
         <div class="wp-rank${m.rank <= 3 ? ' top' : ''}">${m.rank}</div>
-        <img class="wp-thumb" src="${esc(m.img || '')}" alt="${esc(m.title)}" loading="lazy"
-          onerror="this.onerror=null;this.remove()">
+        <div class="wp-thumb"><img src="${esc(m.img || '')}" alt="${esc(m.title)}" loading="lazy"
+          onload="this.parentElement.classList.add('loaded')"
+          onerror="this.onerror=null;this.parentElement.classList.add('noimg','loaded');this.remove()"></div>
         <div class="wp-info">
           <div class="wp-title">${esc(m.title)}</div>
           ${m.genres?.length ? `<div class="wp-genres">${m.genres.map(esc).join(' · ')}</div>` : ''}
