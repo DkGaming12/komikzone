@@ -198,7 +198,7 @@ function paginate(pagerId, curPage, total, fnName) {
 
   const parts = [];
   const push = (label, page, opts = {}) => parts.push(
-    `<button class="pg-btn${opts.cls || ''}" ${opts.dis ? 'disabled' : ''}
+    `<button class="pg-btn${opts.cls ? ' ' + opts.cls : ''}" ${opts.dis ? 'disabled' : ''}
       ${page ? `data-pg="${page}" data-fn="${fnName}"` : ''}>${label}</button>`);
 
   push('‹', curPage - 1, { dis: curPage <= 1, cls: 'pg-arr' });
@@ -208,7 +208,7 @@ function paginate(pagerId, curPage, total, fnName) {
   for (let i = 1; i <= total; i++) {
     if (i === 1 || i === total || Math.abs(i - curPage) <= win) {
       if (last && i - last > 1) parts.push('<span class="pg-dots">…</span>');
-      push(i, i, { cls: i === curPage ? ' on' : '' });
+      push(i, i, { cls: i === curPage ? 'on' : '' });
       last = i;
     }
   }
