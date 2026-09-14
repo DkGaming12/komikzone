@@ -440,7 +440,77 @@ async function loadHome() {
   };
   loadSection('manhwa-grid', 'Manhwa');
   loadSection('manhua-grid', 'Manhua');
+
+  renderSidebar(d);
 }
+
+/* ─────────────────────────────────────────────────────
+   HOME SIDEBAR (Popular Series tabs + New Series + Genre)
+───────────────────────────────────────────────────── */
+let _wpopData = null;
+
+function renderSidebar(d) {
+  _wpopData = d?.popularRanked || {};
+  renderWpop('weekly');
+
+  const ns = $('ns-list');
+  if (ns) {
+    if (d?.newSeries?.length) {
+      ns.innerHTML = d.newSeries.map(m => `
+        <div class="ns-item" data-slug="${esc(m.slug)}">
+          <img class="ns-thumb" src="${esc(m.img || '')}" alt="${esc(m.title)}" loading="lazy"
+            onerror="this.onerror=null;this.remove()">
+          <div class="ns-info">
+            <div class="ns-title">${esc(m.title)}</div>
+            <div class="ns-meta">${(m.genres || []).map(esc).join(' · ')}${m.year ? ` · ${esc(m.year)}` : ''}</div>
+          </div>
+        </div>`).join('');
+    } else {
+      ns.innerHTML = `<div class="sw-empty">Series baru tidak tersedia.</div>`;
+    }
+  }
+}
+
+function renderWpop(range) {
+  const wrap = $('wpop-list');
+  if (!wrap) return;
+  const list = _wpopData?.[range] || [];
+  wrap.innerHTML = list.length
+    ? list.map(m => `
+      <div class="wpop-item" data-slug="${esc(m.slug)}">
+        <div class="wp-rank${m.rank <= 3 ? ' top' : ''}">${m.rank}</div>
+        <img class="wp-thumb" src="${esc(m.img || '')}" alt="${esc(m.title)}" loading="lazy"
+          onerror="this.onerror=null;this.remove()">
+        <div class="wp-info">
+          <div class="wp-title">${esc(m.title)}</div>
+          ${m.genres?.length ? `<div class="wp-genres">${m.genres.map(esc).join(' · ')}</div>` : ''}
+          ${m.score ? `
+          <div class="wp-rating">
+            <div class="wp-bar"><i style="width:${esc(m.pct || Math.round(parseFloat(m.score) * 10))}%"></i></div>
+            <span class="wp-score">★ ${esc(m.score)}</span>
+          </div>` : ''}
+        </div>
+      </div>`).join('')
+    : `<div class="sw-empty">Data tidak tersedia.</div>`;
+}
+
+$('wpop-tabs')?.addEventListener('click', e => {
+  const t = e.target.closest('.wtab');
+  if (!t) return;
+  $$('#wpop-tabs .wtab').forEach(b => b.classList.remove('active'));
+  t.classList.add('active');
+  renderWpop(t.dataset.range);
+});
+
+// Sidebar item click → detail
+$('wpop-list')?.addEventListener('click', e => {
+  const it = e.target.closest('.wpop-item');
+  if (it?.dataset.slug) openDetail(it.dataset.slug);
+});
+$('ns-list')?.addEventListener('click', e => {
+  const it = e.target.closest('.ns-item');
+  if (it?.dataset.slug) openDetail(it.dataset.slug);
+});
 
 /* ─────────────────────────────────────────────────────
    GENRE QUICK STRIP (below hero, like komikkita)
@@ -463,11 +533,23 @@ async function renderGenreStrip() {
   wrap.innerHTML = finalList.map(g =>
     `<button class="gs-chip" data-gslug="${esc(g.slug)}" data-gname="${esc(g.name)}">${esc(g.name)}</button>`
   ).join('');
+
+  // Sidebar genre widget (full list, like komikkita)
+  const side = $('side-genres');
+  if (side) {
+    side.innerHTML = list.map(g =>
+      `<button class="sg-link" data-gslug="${esc(g.slug)}" data-gname="${esc(g.name)}">${esc(g.name)}</button>`
+    ).join('');
+  }
 }
 
 $('genre-strip-inner')?.addEventListener('click', e => {
   const chip = e.target.closest('.gs-chip');
   if (chip) loadGenre(chip.dataset.gslug, chip.dataset.gname, 1);
+});
+$('side-genres')?.addEventListener('click', e => {
+  const g = e.target.closest('.sg-link');
+  if (g) loadGenre(g.dataset.gslug, g.dataset.gname, 1);
 });
 
 /* ─────────────────────────────────────────────────────

@@ -176,7 +176,47 @@ app.get('/api/home', async (req, res) => {
       if (title && slug) updates.push({ title, slug, img, chapters: chapters.slice(0, 3) });
     });
 
-    res.json({ featured: featuredFinal, updates: updates.slice(0, 16), popular });
+    // Sidebar: Popular Series (Mingguan / Bulanan / Semua) — ranked list w/ rating
+    const popularRanked = { weekly: [], monthly: [], alltime: [] };
+    $('#sidebar .serieslist.pop').each((_, ul) => {
+      const range = (($(ul).attr('class') || '').match(/wpop-(\w+)/) || [])[1];
+      if (!range || !(range in popularRanked)) return;
+      $(ul).find('li').each((__, el) => {
+        const li = $(el);
+        const title = li.find('h2 a').first().text().trim();
+        const slug = mangaSlugFromHref(li.find('h2 a').first().attr('href'));
+        if (!title || !slug) return;
+        popularRanked[range].push({
+          rank: parseInt(li.find('.ctr').text()) || popularRanked[range].length + 1,
+          title, slug,
+          img: imgSrc($, li.find('img').first()),
+          score: li.find('.numscore').first().text().trim(),
+          pct: ((li.find('.rtb span').attr('style') || '').match(/width:\s*(\d+)%/) || [])[1] || '',
+          genres: li.find('span a[rel="tag"]').map((_, g) => $(g).text().trim()).get().slice(0, 3)
+        });
+      });
+      popularRanked[range] = popularRanked[range].slice(0, 10);
+    });
+
+    // Sidebar: New Series (sidebar list without rank numbers)
+    const newSeries = [];
+    $('#sidebar .serieslist').not('.pop').first().find('li').each((_, el) => {
+      const li = $(el);
+      const title = li.find('h2 a').first().text().trim();
+      const slug = mangaSlugFromHref(li.find('h2 a').first().attr('href'));
+      if (!title || !slug) return;
+      newSeries.push({
+        title, slug,
+        img: imgSrc($, li.find('img').first()),
+        genres: li.find('span a[rel="tag"]').map((_, g) => $(g).text().trim()).get().slice(0, 3),
+        year: (li.find('.leftseries span').last().text() || '').trim().slice(0, 4)
+      });
+    });
+
+    res.json({
+      featured: featuredFinal, updates: updates.slice(0, 16), popular,
+      popularRanked, newSeries: newSeries.slice(0, 6)
+    });
   } catch (e) {
     console.error('/api/home error:', e.message);
     res.status(502).json({ error: 'Sumber data sedang tidak bisa diakses. Coba lagi beberapa saat.' });

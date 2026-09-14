@@ -12,7 +12,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260914" />
+  <link rel="stylesheet" href="style.css?v=20260915" />
 </head>
 
 <body>
@@ -97,101 +97,135 @@
         <div class="genre-strip-inner" id="genre-strip-inner"></div>
       </nav>
 
-      <!-- Terakhir Dibaca -->
-      <section class="home-blk" id="history-blk" style="display:none">
-        <div class="blk-head">
-          <h2 class="blk-title">🕐 Terakhir Dibaca</h2>
-          <button class="blk-more" id="clear-history" style="color:var(--txt3);font-size:.72rem">Hapus Semua</button>
-        </div>
-        <div class="history-row" id="history-row"><!-- JS --></div>
-      </section>
+      <!-- 2-column layout: main + sidebar (like komikkita) -->
+      <div class="home-layout">
+        <div class="home-main">
 
-      <!-- Rekomendasi (4-card slider with type filter) -->
-      <section class="home-blk" id="reko-blk">
-        <div class="blk-head">
-          <h2 class="blk-title">⭐ Rekomendasi</h2>
-        </div>
-        <div class="reko-filter">
-          <button class="filt active" data-reko="all">Semua</button>
-          <button class="filt" data-reko="Manhwa">Manhwa</button>
-          <button class="filt" data-reko="Manga">Manga</button>
-          <button class="filt" data-reko="Manhua">Manhua</button>
-        </div>
-        <div class="reko-slider-wrap">
-          <button class="reko-arrow left" id="reko-prev">‹</button>
-          <div class="reko-slider" id="reko-slider">
-            <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-            <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-            <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-            <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          </div>
-          <button class="reko-arrow right" id="reko-next">›</button>
-        </div>
-      </section>
+          <!-- Terakhir Dibaca -->
+          <section class="home-blk" id="history-blk" style="display:none">
+            <div class="blk-head">
+              <h2 class="blk-title">🕐 Terakhir Dibaca</h2>
+              <button class="blk-more" id="clear-history" style="color:var(--txt3);font-size:.72rem">Hapus Semua</button>
+            </div>
+            <div class="history-row" id="history-row"><!-- JS --></div>
+          </section>
 
-      <!-- Update Terbaru (card grid + pagination) -->
-      <section class="home-blk">
-        <div class="blk-head">
-          <h2 class="blk-title"><span class="live-dot"></span> Update Terbaru</h2>
-          <a class="blk-more" data-nav="explore" href="#">Semua</a>
-        </div>
-        <div class="card-grid" id="update-grid"></div>
-        <div class="pager" id="update-pager"></div>
-      </section>
+          <!-- Rekomendasi (4-card slider with type filter) -->
+          <section class="home-blk" id="reko-blk">
+            <div class="blk-head">
+              <h2 class="blk-title">⭐ Rekomendasi</h2>
+            </div>
+            <div class="reko-filter">
+              <button class="filt active" data-reko="all">Semua</button>
+              <button class="filt" data-reko="Manhwa">Manhwa</button>
+              <button class="filt" data-reko="Manga">Manga</button>
+              <button class="filt" data-reko="Manhua">Manhua</button>
+            </div>
+            <div class="reko-slider-wrap">
+              <button class="reko-arrow left" id="reko-prev">‹</button>
+              <div class="reko-slider" id="reko-slider">
+                <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+                <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+                <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+                <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              </div>
+              <button class="reko-arrow right" id="reko-next">›</button>
+            </div>
+          </section>
 
-      <!-- Popular / Hot -->
-      <section class="home-blk">
-        <div class="blk-head">
-          <h2 class="blk-title">🔥 Komik Populer</h2>
-          <a class="blk-more" data-nav="top" href="#">Semua</a>
-        </div>
-        <div class="card-grid" id="pop-grid">
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-        </div>
-      </section>
+          <!-- Update Terbaru (card grid + pagination) -->
+          <section class="home-blk">
+            <div class="blk-head">
+              <h2 class="blk-title"><span class="live-dot"></span> Update Terbaru</h2>
+              <a class="blk-more" data-nav="explore" href="#">Semua</a>
+            </div>
+            <div class="card-grid" id="update-grid"></div>
+            <div class="pager" id="update-pager"></div>
+          </section>
 
-      <!-- Manhwa Webtoon -->
-      <section class="home-blk">
-        <div class="blk-head">
-          <h2 class="blk-title">📱 Manhwa / Webtoon</h2>
-          <a class="blk-more" data-nav="genre" href="#">Lihat Genre</a>
-        </div>
-        <div class="card-grid" id="manhwa-grid">
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-        </div>
-      </section>
+          <!-- Popular / Hot -->
+          <section class="home-blk">
+            <div class="blk-head">
+              <h2 class="blk-title">🔥 Komik Populer</h2>
+              <a class="blk-more" data-nav="top" href="#">Semua</a>
+            </div>
+            <div class="card-grid" id="pop-grid">
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+            </div>
+          </section>
 
-      <!-- Manhua -->
-      <section class="home-blk">
-        <div class="blk-head">
-          <h2 class="blk-title">🐉 Manhua / Donghua</h2>
-          <a class="blk-more" data-nav="allseries" href="#">Lihat Semua</a>
+          <!-- Manhwa Webtoon -->
+          <section class="home-blk">
+            <div class="blk-head">
+              <h2 class="blk-title">📱 Manhwa / Webtoon</h2>
+              <a class="blk-more" data-nav="genre" href="#">Lihat Genre</a>
+            </div>
+            <div class="card-grid" id="manhwa-grid">
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+            </div>
+          </section>
+
+          <!-- Manhua -->
+          <section class="home-blk">
+            <div class="blk-head">
+              <h2 class="blk-title">🐉 Manhua / Donghua</h2>
+              <a class="blk-more" data-nav="allseries" href="#">Lihat Semua</a>
+            </div>
+            <div class="card-grid" id="manhua-grid">
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+              <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
+            </div>
+          </section>
         </div>
-        <div class="card-grid" id="manhua-grid">
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-          <div class="skel-card"><div class="skel-img"></div><div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>
-        </div>
-      </section>
+
+        <!-- Sidebar kanan (like komikkita) -->
+        <aside class="home-side">
+          <section class="side-widget">
+            <h3 class="sw-head">🔥 Popular Series</h3>
+            <div class="wpop-tabs" id="wpop-tabs">
+              <button class="wtab active" data-range="weekly">Mingguan</button>
+              <button class="wtab" data-range="monthly">Bulanan</button>
+              <button class="wtab" data-range="alltime">Semua</button>
+            </div>
+            <div class="wpop-list" id="wpop-list">
+              <div class="sw-skel"></div><div class="sw-skel"></div><div class="sw-skel"></div>
+              <div class="sw-skel"></div><div class="sw-skel"></div>
+            </div>
+          </section>
+
+          <section class="side-widget">
+            <h3 class="sw-head">🆕 Series Baru</h3>
+            <div class="ns-list" id="ns-list">
+              <div class="sw-skel"></div><div class="sw-skel"></div><div class="sw-skel"></div>
+            </div>
+          </section>
+
+          <section class="side-widget">
+            <h3 class="sw-head">🎭 Genre</h3>
+            <div class="side-genres" id="side-genres"></div>
+          </section>
+        </aside>
+      </div>
     </div>
 
     <!-- EXPLORE -->
@@ -391,7 +425,7 @@
       return Array(n).fill(`<div class="skel-card"><div class="skel-img"></div><div class="skel-line" style="margin:.7rem .7rem .3rem"></div><div class="skel-line s" style="margin:0 .7rem .7rem"></div></div>`).join('');
     }
   </script>
-  <script src="app.js?v=20260914"></script>
+  <script src="app.js?v=20260915"></script>
 </body>
 
 </html>
