@@ -97,11 +97,14 @@ function openReaderSafe(chSlug, title) {
   openReader(chSlug, title);
 }
 
-function buildCard(m) {
+function buildCard(m, opts = {}) {
   const el = document.createElement('div');
   el.className = 'komik-card';
   el.onclick = () => openDetail(m.slug);
 
+  const rank = opts.rank
+    ? `<div class="kc-rank${opts.rank <= 3 ? ' top' : ''}">${opts.rank}</div>`
+    : '';
   const typeLabel = m.type ? `<span class="kc-type tag t-${esc(m.type.toLowerCase())}">${esc(m.type)}</span>` : '';
   const score = m.score ? `<div class="kc-score">★ ${esc(m.score)}</div>` : '';
   const safeTitle = esc(m.title || '');
@@ -124,7 +127,7 @@ function buildCard(m) {
     <div class="kc-thumb">
       <img class="kc-img" src="${esc(m.img || '')}" alt="${safeTitle}" loading="lazy"
         onerror="this.onerror=null;this.parentElement.classList.add('noimg');this.remove()">
-      ${typeLabel}${score}
+      ${rank}${typeLabel}${score}
       <div class="kc-ov"><div class="kc-play">▶</div></div>
     </div>
     <div class="kc-body">
@@ -235,22 +238,27 @@ function initSlider(items) {
   slideN = items.length;
   sl.innerHTML = items.map((m, i) => `
     <div class="feat-slide" data-i="${i}" data-slug="${esc(m.slug)}">
-      <div class="feat-bg" style="background-image:url('${esc(m.img || '')}')"></div>
+      <div class="feat-bg" style="background-image:url('${esc(m.banner || m.img || '')}')"></div>
       <div class="feat-overlay"></div>
       <div class="feat-body">
-        <img class="feat-cover" src="${esc(m.img || '')}" alt="${esc(m.title || '')}" loading="${i === 0 ? 'eager' : 'lazy'}">
+        ${m.img ? `<img class="feat-cover" src="${esc(m.img)}" alt="${esc(m.title || '')}" loading="${i === 0 ? 'eager' : 'lazy'}">` : ''}
         <div class="feat-info">
-          <div class="feat-tags">${(m.genres || []).slice(0, 3).map(g => `<span class="tag">${esc(g)}</span>`).join('')}</div>
+          <div class="feat-tags">
+            ${m.score ? `<span class="tag t-score">★ ${esc(m.score)}</span>` : ''}
+            ${m.type ? `<span class="tag t-${esc(m.type.toLowerCase())}">${esc(m.type)}</span>` : ''}
+            ${(m.genres || []).slice(0, 4).map(g => `<span class="tag t-genre">${esc(g)}</span>`).join('')}
+          </div>
           <h2 class="feat-title">${esc(m.title || '')}</h2>
+          ${m.synopsis ? `<p class="feat-syn">${esc(m.synopsis)}</p>` : ''}
           <div class="feat-btns">
-            <button class="btn-primary" data-open="${esc(m.slug)}">📖 Baca</button>
+            <button class="btn-primary" data-open="${esc(m.slug)}">📖 Baca Sekarang</button>
           </div>
         </div>
       </div>
     </div>`).join('');
 
   dot.innerHTML = items.map((_, i) =>
-    `<button class="fdot${i === 0 ? ' on' : ''}" data-slide="${i}"></button>`).join('');
+    `<button class="fdot${i === 0 ? ' on' : ''}" data-slide="${i}" aria-label="Slide ${i + 1}"></button>`).join('');
 
   clearInterval(slideTimer);
   slideIdx = 0;
@@ -392,8 +400,9 @@ async function loadHome() {
     return;
   }
 
-  // Featured slider
+  // Featured slider + genre strip
   if (d.featured?.length) initSlider(d.featured);
+  renderGenreStrip();
 
   // Rekomendasi
   updateRekoPerPage();
@@ -410,8 +419,12 @@ async function loadHome() {
   // Popular + Manhwa + Manhua (parallel, don't block each other)
   const pg = $('pop-grid');
   if (pg) {
-    if (d.popular?.length) { pg.innerHTML = ''; d.popular.forEach(m => pg.appendChild(buildCard(m))); }
-    else pg.innerHTML = `<div style="grid-column:1/-1">${retryBox('Komik populer gagal dimuat.')}</div>`;
+    if (d.popular?.length) {
+      pg.innerHTML = '';
+      d.popular.forEach((m, i) => pg.appendChild(buildCard(m, { rank: i + 1 })));
+    } else {
+      pg.innerHTML = `<div style="grid-column:1/-1">${retryBox('Komik populer gagal dimuat.')}</div>`;
+    }
   }
 
   const loadSection = async (gridId, type) => {
@@ -428,6 +441,34 @@ async function loadHome() {
   loadSection('manhwa-grid', 'Manhwa');
   loadSection('manhua-grid', 'Manhua');
 }
+
+/* ─────────────────────────────────────────────────────
+   GENRE QUICK STRIP (below hero, like komikkita)
+───────────────────────────────────────────────────── */
+async function renderGenreStrip() {
+  const wrap = $('genre-strip-inner');
+  if (!wrap) return;
+
+  let list = [];
+  const d = await api(`${PROXY}/api/genres`);
+  if (d?.genres?.length) list = d.genres;
+  else list = GENRES_DEFAULT;
+
+  // Compact: only show a curated shortlist to keep the strip tidy
+  const HOT = ['action', 'adventure', 'comedy', 'drama', 'fantasy', 'horror', 'mystery',
+    'romance', 'sci-fi', 'slice-of-life', 'supernatural', 'psychological', 'martial-arts', 'isekai'];
+  const short = HOT.map(s => list.find(g => g.slug === s)).filter(Boolean);
+  const finalList = short.length >= 8 ? short : list.slice(0, 16);
+
+  wrap.innerHTML = finalList.map(g =>
+    `<button class="gs-chip" data-gslug="${esc(g.slug)}" data-gname="${esc(g.name)}">${esc(g.name)}</button>`
+  ).join('');
+}
+
+$('genre-strip-inner')?.addEventListener('click', e => {
+  const chip = e.target.closest('.gs-chip');
+  if (chip) loadGenre(chip.dataset.gslug, chip.dataset.gname, 1);
+});
 
 /* ─────────────────────────────────────────────────────
    HISTORY

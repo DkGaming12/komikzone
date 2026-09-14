@@ -103,14 +103,48 @@ app.get('/api/home', async (req, res) => {
 
     // Popular from homepage widgets ("Populer Hari Ini" etc.)
     let popular = [];
-    $('.widget_series .bsx, .bixbox.hothome .bsx').each((_, el) => {
-      const title = $(el).find('.tt').first().text().trim();
+    $('.widget_series .bsx, .bixbox.hothome .bsx, .popconslide .bsx').each((_, el) => {
+      const title = $(el).find('.tt, a[title]').first().attr('title') || $(el).find('.tt').first().text().trim();
       const href = $(el).find('a').first().attr('href') || '';
       const img = imgSrc($, $(el).find('img').first());
       const score = $(el).find('.rating span, .numscore').first().text().trim();
+      const type = ($(el).find('[class*="type"]').first().attr('class') || '').match(/(?:^|\s)(Manga|Manhwa|Manhua|Novel)(?:\s|$)/)?.[1] || '';
       const slug = mangaSlugFromHref(href);
-      if (title && slug) popular.push({ title, slug, img, score });
+      if (title && slug) popular.push({ title, slug, img, score, type });
     });
+
+    // Featured hero slider (real site slider: banner, score, type, genres, synopsis)
+    const featured = [];
+    const seenFeat = new Set();
+    $('.swiper-slide').each((_, el) => {
+      const s = $(el);
+      // <a href><span class="name">Title</span></a> — .name is a child span
+      const nameEl = s.find('.name').first();
+      const linkEl = nameEl.closest('a');
+      const slug = mangaSlugFromHref(linkEl.attr('href'));
+      if (!slug || seenFeat.has(slug)) return;
+      const genres = [];
+      s.find('.metas-genres-values a').each((_, g) => {
+        const gn = $(g).text().trim();
+        if (gn) genres.push(gn);
+      });
+      featured.push({
+        title: nameEl.text().trim(),
+        slug,
+        img: s.find('.bigbanner').attr('data-bg') || imgSrc($, s.find('.bigbanner')),
+        banner: s.find('.bigbanner').attr('data-bg') || '',
+        score: s.find('.meta-score-values').text().trim(),
+        type: s.find('.meta-type-values').text().trim(),
+        genres: genres.slice(0, 4),
+        synopsis: s.find('.desc').text().trim()
+      });
+      seenFeat.add(slug);
+    });
+
+    // Fallback: if slider empty, use top popular items
+    const featuredFinal = featured.length
+      ? featured.slice(0, 7)
+      : popular.slice(0, 6).map(m => ({ ...m, genres: [] }));
 
     // Fallback: fetch popular list page
     if (!popular.length) {
@@ -123,9 +157,6 @@ app.get('/api/home', async (req, res) => {
     } else {
       popular = popular.slice(0, 12);
     }
-
-    // Featured slider: site slider is empty — use top popular items
-    const featured = popular.slice(0, 6).map(m => ({ ...m, genres: [] }));
 
     // Latest updates (list with latest 3 chapters each)
     const updates = [];
@@ -145,7 +176,7 @@ app.get('/api/home', async (req, res) => {
       if (title && slug) updates.push({ title, slug, img, chapters: chapters.slice(0, 3) });
     });
 
-    res.json({ featured, updates: updates.slice(0, 16), popular });
+    res.json({ featured: featuredFinal, updates: updates.slice(0, 16), popular });
   } catch (e) {
     console.error('/api/home error:', e.message);
     res.status(502).json({ error: 'Sumber data sedang tidak bisa diakses. Coba lagi beberapa saat.' });
