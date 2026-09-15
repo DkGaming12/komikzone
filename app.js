@@ -812,7 +812,7 @@ async function openDetail(slug) {
 
     <!-- Chapter list -->
     <div class="ch-section" id="ch-section">
-      <h3><span>📚 Daftar Chapter <span class="md-badge">Shinigami</span></span></h3>
+      <h3><span>📚 Daftar Chapter</span></h3>
       <div class="ch-list" id="ch-list">
         ${buildChapterList(d.chapters || [], slug)}
       </div>
