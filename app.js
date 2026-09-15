@@ -978,10 +978,12 @@ async function openReader(chSlug, title) {
 function updateReaderNav() {
   const n = _curChapters.length;
   $('r-ch-info').textContent = `${_rChIdx + 1} / ${n}`;
-  $('r-prev-ch').disabled = _rChIdx <= 0;
-  $('r-next-ch').disabled = _rChIdx >= n - 1;
-  $('rnav-prev').disabled = _rChIdx <= 0;
-  $('rnav-next').disabled = _rChIdx >= n - 1;
+  // Daftar chapter terbaru-dulu (idx 0 = chapter terbaru):
+  // "Berikutnya" = nomor lebih tinggi = idx-1, "Sebelumnya" = idx+1
+  $('r-next-ch').disabled = _rChIdx <= 0;
+  $('rnav-next').disabled = _rChIdx <= 0;
+  $('r-prev-ch').disabled = _rChIdx >= n - 1;
+  $('rnav-prev').disabled = _rChIdx >= n - 1;
 }
 
 function goReaderChapter(delta) {
@@ -993,10 +995,10 @@ function goReaderChapter(delta) {
 }
 
 $('r-back').addEventListener('click', () => navigate('detail'));
-$('r-prev-ch').addEventListener('click', () => goReaderChapter(-1));
-$('r-next-ch').addEventListener('click', () => goReaderChapter(+1));
-$('rnav-prev').addEventListener('click', () => goReaderChapter(-1));
-$('rnav-next').addEventListener('click', () => goReaderChapter(+1));
+$('r-prev-ch').addEventListener('click', () => goReaderChapter(+1));
+$('r-next-ch').addEventListener('click', () => goReaderChapter(-1));
+$('rnav-prev').addEventListener('click', () => goReaderChapter(+1));
+$('rnav-next').addEventListener('click', () => goReaderChapter(-1));
 
 // Retry a single failed reader page
 $('reader-pages').addEventListener('click', e => {
@@ -1041,6 +1043,10 @@ document.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
     e.preventDefault(); $('q').focus(); $('q').select();
+  }
+  if (e.key === 'Escape') {
+    $('search-drop').classList.remove('open');
+    $('q').blur();
   }
 });
 
@@ -1123,6 +1129,9 @@ function navigate(name) {
   curPg = name;
   window.scrollTo({ top: 0 });
   $('mmenu')?.classList.remove('open');
+
+  // Refresh "Terakhir Dibaca" setiap kali kembali ke home (history tersimpan saat baca)
+  if (name === 'home') renderHistory();
 
   if (name === 'explore' && !$('exp-grid').children.length) loadExplore(1);
   if (name === 'top' && !$('top-grid').children.length) loadTop(1);
