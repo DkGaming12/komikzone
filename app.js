@@ -66,6 +66,61 @@ let topType = '';
 
 let slideIdx = 0, slideN = 0, slideTimer = null;
 
+/* ── URL routing (SEO: tiap halaman punya URL sendiri) ── */
+const PAGE_PATHS = {
+  home: { path: '/', title: '' },
+  explore: { path: '/explore', title: 'Explore Komik' },
+  top: { path: '/top', title: 'Top Komik' },
+  allseries: { path: '/all-series', title: 'All Series' },
+  genre: { path: '/genre', title: 'Genre Komik' }
+};
+const DEFAULT_TITLE = document.title;
+let _navPushed = false;
+
+/** Update address bar + document.title.
+ *  Pindah "grup" halaman (mis. /manga → /chapter) = pushState;
+ *  pindah item dalam grup yang sama (chapter 1 → chapter 2) = replaceState
+ *  supaya history tidak penuh entri chapter. */
+function setUrl(path, title) {
+  try {
+    const base = p => p.replace(/\/[^/]*$/, '');
+    if (location.pathname !== path) {
+      if (base(location.pathname) === base(path)) history.replaceState({}, '', path);
+      else { history.pushState({}, '', path); _navPushed = true; }
+    }
+  } catch { }
+  document.title = title ? `${title} – KomikZone` : DEFAULT_TITLE;
+}
+
+/** Tombol "← Kembali": pakai history bila kita yang push, agar URL ikut mundur */
+function goBack() {
+  if (_navPushed) history.back();
+  else navigate(prevPg || 'home');
+}
+
+/** Restore halaman dari URL (popstate / direct load / back dari Google) */
+function routeFromPath() {
+  const p = decodeURIComponent(location.pathname).replace(/\/+$/, '') || '/';
+  const q = new URLSearchParams(location.search).get('q');
+  if (q) {
+    const inp = $('q');
+    if (inp) { inp.value = q; inp.dispatchEvent(new Event('input')); }
+    return;
+  }
+  if (p === '/' || p === '/index.html') { navigate('home'); return; }
+  if (p === '/explore') return navigate('explore');
+  if (p === '/top') return navigate('top');
+  if (p === '/all-series') return navigate('allseries');
+  if (p === '/genre') return navigate('genre');
+  let m;
+  if ((m = p.match(/^\/genre\/([^/]+)$/))) return loadGenre(m[1], m[1].replace(/-/g, ' '), 1);
+  if ((m = p.match(/^\/manga\/([^/]+)$/))) return openDetail(m[1]);
+  if ((m = p.match(/^\/chapter\/([^/]+)$/))) return openReader(m[1]);
+  if ((m = p.match(/^\/p\/([a-z]+)$/))) return showPage(m[1]);
+  navigate('home');
+}
+window.addEventListener('popstate', routeFromPath);
+
 /* ── Genre list (fallback if API empty) ── */
 const GENRES_DEFAULT = [
   { name: 'Action', slug: 'action', icon: '⚔️' },
@@ -723,6 +778,7 @@ async function buildGenreTiles() {
 
 async function loadGenre(slug, name, pg = 1) {
   navigate('genreview');
+  setUrl(`/genre/${slug}`, `Genre ${name}`);
   const ht = $('genre-view-title');
   if (ht) ht.textContent = name;
   gridLoading('genre-view-grid', 12);
@@ -746,6 +802,7 @@ async function openDetail(slug) {
   if (!slug) return;
   prevPg = curPg;
   navigate('detail');
+  setUrl(`/manga/${slug}`);
   const root = $('detail-root');
   root.innerHTML = `<div class="detail-loading"><div class="spin"></div><p>Memuat detail komik…</p></div>`;
 
@@ -755,16 +812,17 @@ async function openDetail(slug) {
       <div class="ei">😢</div><div class="et">Gagal memuat komik</div>
       <div class="es">Sumber data mungkin sibuk. Silakan coba lagi.</div>
       <button class="btn-primary" style="margin-top:1rem" onclick="openDetail('${esc(slug)}')">🔄 Coba Lagi</button>
-      <button class="btn-primary" style="margin-top:1rem;background:transparent;color:inherit" onclick="navigate('${prevPg}')">← Kembali</button>
+      <button class="btn-primary" style="margin-top:1rem;background:transparent;color:inherit" onclick="goBack()">← Kembali</button>
     </div>`;
     return;
   }
 
   const scCol = '#a855f7';
   const syn = d.synopsis || 'Sinopsis tidak tersedia.';
+  setUrl(`/manga/${slug}`, d.title);
 
   root.innerHTML = `
-    <button class="detail-back" onclick="navigate('${prevPg}')">← Kembali</button>
+    <button class="detail-back" onclick="goBack()">← Kembali</button>
 
     <div class="d-hero">
       <div class="d-bg" style="background-image:url('${esc(d.img || '')}')"></div>
@@ -909,6 +967,7 @@ function startReadFirst() {
 async function openReader(chSlug, title) {
   if (!chSlug) return;
   navigate('reader');
+  setUrl(`/chapter/${chSlug}`);
 
   const pages = $('reader-pages');
   pages.innerHTML = `<div class="reader-loading"><div class="spin"></div><p>Memuat data chapter…</p></div>`;
@@ -931,6 +990,7 @@ async function openReader(chSlug, title) {
 
   const ch = _curChapters[_rChIdx] || { slug: chSlug, title: 'Chapter' };
   $('r-title').textContent = `${title || _curTitle || ''} — ${ch.title || 'Chapter'}`;
+  document.title = `${title || _curTitle || ''} ${ch.title || ''}`.trim() + ' – KomikZone';
 
   if (_curMangaSlug && ch.slug) {
     saveHistory(_curMangaSlug, _curTitle, _curImg, ch.slug, ch.title || 'Chapter');
@@ -1002,7 +1062,7 @@ function goReaderChapter(delta) {
   openReader(ch.slug, _curTitle);
 }
 
-$('r-back').addEventListener('click', () => navigate('detail'));
+$('r-back').addEventListener('click', () => { if (_navPushed) history.back(); else navigate('detail'); });
 $('r-prev-ch').addEventListener('click', () => goReaderChapter(+1));
 $('r-next-ch').addEventListener('click', () => goReaderChapter(-1));
 $('rnav-prev').addEventListener('click', () => goReaderChapter(+1));
@@ -1119,6 +1179,7 @@ function showPage(id) {
   const c = $('text-page-content');
   if (t) t.textContent = data.title;
   if (c) c.innerHTML = data.html;
+  setUrl(`/p/${id}`, data.title);
   navigate('page');
 }
 
@@ -1145,6 +1206,9 @@ function navigate(name) {
   if (name === 'top' && !$('top-grid').children.length) loadTop(1);
   if (name === 'allseries' && !$('all-grid').children.length) loadAllSeries(1);
   if (name === 'genre' && !$('genre-grid').children.length) buildGenreTiles();
+
+  // URL + judul tab untuk halaman utama (detail/reader/genre diatur sendiri)
+  if (PAGE_PATHS[name]) setUrl(PAGE_PATHS[name].path, PAGE_PATHS[name].title);
 }
 
 document.addEventListener('click', e => {
@@ -1207,6 +1271,8 @@ function initPopup() {
 ───────────────────────────────────────────────────── */
 (async () => {
   initPopup();
+  // Restore halaman dari URL (direct load / back dari Google / share link)
+  routeFromPath();
   try {
     await loadHome();
   } catch (err) {

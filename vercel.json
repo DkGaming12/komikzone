@@ -4,10 +4,18 @@
     { "src": "server.js", "use": "@vercel/node" },
     { "src": "index.html", "use": "@vercel/static" },
     { "src": "app.js", "use": "@vercel/static" },
-    { "src": "style.css", "use": "@vercel/static" }
+    { "src": "style.css", "use": "@vercel/static" },
+    { "src": "og-image.png", "use": "@vercel/static" },
+    { "src": "favicon.png", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/server.js" },
+    { "src": "/robots.txt", "dest": "/server.js" },
+    { "src": "/sitemap.xml", "dest": "/server.js" },
+    {
+      "src": "/(explore|top|all-series|genre|manga|chapter|p)(/[^.]*)?$",
+      "dest": "/index.html"
+    },
     {
       "src": "/",
       "dest": "/index.html",

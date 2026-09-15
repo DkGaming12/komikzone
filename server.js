@@ -387,6 +387,54 @@ app.get('/api/genre/:slug', async (req, res) => {
   }
 });
 
+/* ── SEO: robots.txt & sitemap.xml ───────────────────── */
+const SITE = 'https://komikzone.web.id';
+
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(
+    `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`
+  );
+});
+
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const staticUrls = ['', '/explore', '/top', '/genre', '/all-series'];
+
+    // Kumpulkan manga dari beberapa sumber supaya Google menemukan halaman detail
+    const [latest, topW, rated] = await Promise.all([
+      getJSON('/manga/list?page=1&page_size=100&sort=latest&sort_order=desc', 3_600_000).catch(() => null),
+      getJSON('/manga/top?filter=weekly&page=1&page_size=100', 3_600_000).catch(() => null),
+      getJSON('/manga/list?page=1&page_size=100&sort=rating&sort_order=desc', 3_600_000).catch(() => null)
+    ]);
+    const seen = new Set();
+    const urls = [...staticUrls];
+    for (const r of [latest, topW, rated]) {
+      for (const m of (r?.data || [])) {
+        if (m?.manga_id && !seen.has(m.manga_id)) {
+          seen.add(m.manga_id);
+          urls.push(`/manga/${m.manga_id}`);
+        }
+      }
+    }
+
+    const xml =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+      urls.map(u => `  <url><loc>${SITE}${u}</loc></url>`).join('\n') +
+      `\n</urlset>\n`;
+    res.type('application/xml').send(xml);
+  } catch (e) {
+    console.error('/sitemap.xml error:', e.message);
+    res.status(500).type('application/xml').send('<?xml version="1.0"?><urlset></urlset>');
+  }
+});
+
+/* ── SPA fallback: URL routing client-side (paritas dengan rute Vercel) ──
+   Path tanpa ekstensi file saja — /manga/style.css tetap ke static */
+app.get(/^\/(explore|top|all-series|genre|manga|chapter|p)(\/[^.]*)?$/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 /* ── Server start or Export for Vercel ──────────────── */
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   app.listen(PORT, () => {
