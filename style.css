@@ -2470,6 +2470,54 @@ body::before {
   max-width: 58%;
 }
 
+/* ============ SLOT IKLAN ============ */
+.ad-slot {
+  margin: 1.25rem auto;
+  text-align: center;
+}
+
+.ad-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+  flex-wrap: wrap;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, .025);
+  border: 1px dashed var(--border2);
+  border-radius: var(--r2);
+  color: var(--txt3);
+  font-size: .78rem;
+  letter-spacing: .02em;
+}
+
+.ad-box a {
+  color: var(--txt2);
+  text-decoration: underline;
+}
+
+/* Leaderboard: 728x90 desktop, 320x50 mobile (standar iklan web manga) */
+.ad-728 {
+  width: 728px;
+  max-width: 100%;
+  height: 90px;
+}
+
+/* Medium rectangle: sidebar */
+.ad-300 {
+  width: 300px;
+  max-width: 100%;
+  height: 250px;
+}
+
+@media (max-width: 758px) {
+  .ad-728 {
+    width: 320px;
+    height: 50px;
+    font-size: .68rem;
+  }
+}
+
 /* ============ TOAST / BTT ============ */
 .toast {
   position: fixed;

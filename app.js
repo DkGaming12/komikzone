@@ -875,6 +875,9 @@ async function openDetail(slug) {
       </div>
     </div>
 
+    <!-- Slot iklan -->
+    ${AD_SLOT_LB}
+
     <!-- Chapter list -->
     <div class="ch-section" id="ch-section">
       <h3><span>📚 Daftar Chapter</span></h3>
@@ -923,6 +926,11 @@ function dRow(l, v) {
   if (!v || v === '-') return '';
   return `<div class="d-row"><span class="d-rl">${esc(l)}</span><span class="d-rv">${esc(v)}</span></div>`;
 }
+
+/* Slot iklan placeholder (728x90 desktop / 320x50 mobile) */
+const AD_SLOT_LB = `<div class="ad-slot">
+  <div class="ad-box ad-728">Slot iklan tersedia. <a href="mailto:dknimelol@gmail.com">Hubungi dknimelol@gmail.com</a></div>
+</div>`;
 
 // Build chapter list with range tabs (Ch 1–50, 51–100, etc.)
 // Server returns newest first, so we reverse to show Ch 1 at top
@@ -1085,6 +1093,9 @@ async function openReader(chSlug, title) {
       <img src="${esc(src)}" alt="Halaman ${i + 1}" loading="${i < 3 ? 'eager' : 'lazy'}">
     </div>`
   ).join('');
+
+  // Slot iklan di bawah halaman terakhir
+  pages.insertAdjacentHTML('beforeend', AD_SLOT_LB);
 
   // Placeholder while each image loads; swap to error msg on failure
   let loaded = 0;
