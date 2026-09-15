@@ -388,7 +388,7 @@ app.get('/api/genre/:slug', async (req, res) => {
 });
 
 /* ── SEO: robots.txt & sitemap.xml ───────────────────── */
-const SITE = 'https://komikzone.web.id';
+const SITE = 'https://www.komikzone.web.id';
 
 app.get('/robots.txt', (req, res) => {
   res.type('text/plain').send(
