@@ -42,9 +42,17 @@ function esc(s) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function showToast(msg) {
+let _toastTimer = null;
+
+function showToast(msg, dur = 2800) {
   const t = $('toast'); t.textContent = msg; t.classList.add('on');
-  setTimeout(() => t.classList.remove('on'), 2800);
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(hideToast, dur);
+}
+
+function hideToast() {
+  clearTimeout(_toastTimer);
+  $('toast')?.classList.remove('on');
 }
 
 /** Retry button box for failed loads — fn must be callable from onclick string */
@@ -842,10 +850,9 @@ async function openDetail(slug) {
             ${d.score ? `<div class="d-stat"><div class="d-val sc" style="color:${scCol}">★ ${esc(d.score)}</div><div class="d-lbl-s">Score</div></div>` : ''}
             ${(d.chapters || []).length ? `<div class="d-stat"><div class="d-val">${d.chapters.length}</div><div class="d-lbl-s">Chapter</div></div>` : ''}
           </div>
-          <div style="margin-top:12px">
-            <button class="btn-primary" id="d-read-btn">
-              📖 ${(d.chapters || []).length ? 'Baca Chapter Terbaru' : 'Tidak Ada Chapter'}
-            </button>
+          <div class="d-btns">
+            <button class="btn-primary" id="d-read-btn"></button>
+            <button class="btn-ghost" id="d-latest-btn">Baca Chapter Terbaru</button>
           </div>
         </div>
       </div>
@@ -877,11 +884,31 @@ async function openDetail(slug) {
     </div>`;
 
   // Wire up interactions
-  $('d-read-btn')?.addEventListener('click', startReadFirst);
+  // Tombol utama: "Lanjut Baca" bila pengunjung punya riwayat, selain itu
+  // "Baca Chapter Awal". Tombol kedua selalu "Baca Chapter Terbaru".
   const readBtn = $('d-read-btn');
-  if (readBtn && !(d.chapters || []).length) {
+  const latestBtn = $('d-latest-btn');
+  const chaptersArr = d.chapters || [];
+  if (!chaptersArr.length) {
+    readBtn.textContent = 'Tidak Ada Chapter';
     readBtn.disabled = true;
     readBtn.style.opacity = '.4';
+    latestBtn.style.display = 'none';
+  } else {
+    const hist = getHistory().find(x => x.mangaSlug === slug);
+    const hIdx = hist ? chaptersArr.findIndex(c => c.slug === hist.chapterSlug) : -1;
+    if (hIdx >= 0) {
+      // Chapter terakhir selesai dibaca (sampai bawah) & masih ada yang lebih
+      // baru → lanjut ke chapter berikutnya; kalau berhenti di tengah, buka lagi chapter itu
+      const target = (hist.done && hIdx > 0) ? hIdx - 1 : hIdx;
+      readBtn.textContent = `▶ Lanjut Baca ${chaptersArr[target].title || 'Chapter'}`;
+      readBtn.onclick = () => openReader(chaptersArr[target].slug, d.title);
+    } else {
+      // Daftar chapter terbaru-dulu: chapter awal ada di index terakhir
+      readBtn.textContent = '📖 Baca Chapter Awal';
+      readBtn.onclick = () => openReader(chaptersArr[chaptersArr.length - 1].slug, d.title);
+    }
+    latestBtn.onclick = () => openReader(chaptersArr[0].slug, d.title);
   }
   root.querySelectorAll('.d-gtag').forEach(t => t.addEventListener('click', () =>
     loadGenre(t.dataset.gslug, t.dataset.gname, 1)));
@@ -958,10 +985,44 @@ let _curMangaSlug = '';
 let _rChIdx = 0;
 let _chReadCount = parseInt(localStorage.getItem('kz_ch_read') || '0');
 
-function startReadFirst() {
-  if (!_curChapters.length) return;
-  // Server sends newest chapter first at index 0
-  openReader(_curChapters[0].slug, _curTitle);
+/** Tandai chapter terakhir yang dibaca sebagai selesai (scroll sampai bawah).
+ *  Dipakai tombol "Lanjut Baca" di halaman detail untuk melompat ke chapter
+ *  berikutnya, bukan mengulang chapter yang sudah tamat dibaca. */
+function markChapterDone() {
+  if (!_curMangaSlug) return;
+  const h = getHistory();
+  const e = h.find(x => x.mangaSlug === _curMangaSlug);
+  if (e && !e.done) {
+    e.done = true;
+    try { localStorage.setItem('kz_history', JSON.stringify(h)); } catch { }
+  }
+}
+
+/* Auto-next: saat scroll mentok di paling bawah reader, otomatis lanjut ke
+   chapter berikutnya setelah jeda singkat (bisa dibatalkan dengan scroll balik
+   ke atas). Tombol next manual tetap ada. */
+let _rAutoTimer = null;
+let _rMaxScroll = 0;
+
+function readerAutoNext() {
+  if (curPg !== 'reader' || _rChIdx <= 0) return; // tidak ada chapter berikutnya
+  if (!$('reader-pages').querySelector('.r-page img')) return; // gambar belum termuat
+  _rMaxScroll = Math.max(_rMaxScroll, window.scrollY);
+  // Butuh scroll sungguhan dulu — mencegah auto-next berantai di chapter pendek
+  if (_rMaxScroll <= 200) return;
+  const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80;
+  if (atBottom) {
+    if (_rAutoTimer) return;
+    showToast('Lanjut ke chapter berikutnya…', 500);
+    _rAutoTimer = setTimeout(() => {
+      _rAutoTimer = null;
+      hideToast(); // hilang tepat saat pindah chapter
+      goReaderChapter(-1);
+    }, 1500);
+  } else if (_rAutoTimer) {
+    clearTimeout(_rAutoTimer);
+    _rAutoTimer = null;
+  }
 }
 
 async function openReader(chSlug, title) {
@@ -1037,6 +1098,8 @@ async function openReader(chSlug, title) {
   });
 
   updateReaderNav();
+  if (_rAutoTimer) { clearTimeout(_rAutoTimer); _rAutoTimer = null; }
+  _rMaxScroll = 0;
   window.scrollTo({ top: 0 });
 }
 
@@ -1049,14 +1112,13 @@ function updateReaderNav() {
   // Daftar chapter terbaru-dulu (idx 0 = chapter terbaru):
   // "Berikutnya" = nomor lebih tinggi = idx-1, "Sebelumnya" = idx+1
   $('r-next-ch').disabled = _rChIdx <= 0;
-  $('rnav-next').disabled = _rChIdx <= 0;
   $('r-prev-ch').disabled = _rChIdx >= n - 1;
-  $('rnav-prev').disabled = _rChIdx >= n - 1;
 }
 
 function goReaderChapter(delta) {
   const newIdx = _rChIdx + delta;
   if (newIdx < 0 || newIdx >= _curChapters.length) return;
+  if (delta < 0) markChapterDone(); // maju ke chapter berikutnya = chapter ini selesai
   _rChIdx = newIdx;
   const ch = _curChapters[_rChIdx];
   openReader(ch.slug, _curTitle);
@@ -1065,8 +1127,6 @@ function goReaderChapter(delta) {
 $('r-back').addEventListener('click', () => { if (_navPushed) history.back(); else navigate('detail'); });
 $('r-prev-ch').addEventListener('click', () => goReaderChapter(+1));
 $('r-next-ch').addEventListener('click', () => goReaderChapter(-1));
-$('rnav-prev').addEventListener('click', () => goReaderChapter(+1));
-$('rnav-next').addEventListener('click', () => goReaderChapter(-1));
 
 // Retry a single failed reader page
 $('reader-pages').addEventListener('click', e => {
@@ -1231,6 +1291,7 @@ window.addEventListener('scroll', () => {
   } else {
     $('btt').classList.remove('show');
   }
+  readerAutoNext();
 });
 $('btt').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
