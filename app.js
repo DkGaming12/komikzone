@@ -975,7 +975,10 @@ async function openReader(chSlug, title) {
 
 function updateReaderNav() {
   const n = _curChapters.length;
-  $('r-ch-info').textContent = `${_rChIdx + 1} / ${n}`;
+  // Tampilkan nomor chapter sebenarnya, bukan posisi index
+  // (daftar terbaru-dulu: chapter 1 ada di index terakhir)
+  const num = (_curChapters[_rChIdx]?.title || '').match(/[\d.]+/);
+  $('r-ch-info').textContent = num ? `${num[0]} / ${n}` : `${_rChIdx + 1} / ${n}`;
   // Daftar chapter terbaru-dulu (idx 0 = chapter terbaru):
   // "Berikutnya" = nomor lebih tinggi = idx-1, "Sebelumnya" = idx+1
   $('r-next-ch').disabled = _rChIdx <= 0;
