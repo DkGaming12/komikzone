@@ -858,6 +858,8 @@ async function openDetail(slug) {
       </div>
     </div>
 
+    ${AD_SLOT_LB}
+
     <div class="d-body">
       <div>
         <div class="d-synopsis"><h3>Sinopsis</h3><p>${esc(syn)}</p></div>
@@ -1088,11 +1090,15 @@ async function openReader(chSlug, title) {
     return;
   }
 
-  pages.innerHTML = imgs.map((src, i) =>
-    `<div class="r-page">
+  let pagesHtml = '';
+  imgs.forEach((src, i) => {
+    pagesHtml += `<div class="r-page">
       <img src="${esc(src)}" alt="Halaman ${i + 1}" loading="${i < 3 ? 'eager' : 'lazy'}">
-    </div>`
-  ).join('');
+    </div>`;
+    // Slot iklan sisipan tiap 12 halaman (jangan tepat di paling akhir)
+    if ((i + 1) % 12 === 0 && i < imgs.length - 2) pagesHtml += AD_SLOT_LB;
+  });
+  pages.innerHTML = pagesHtml;
 
   // Slot iklan di bawah halaman terakhir
   pages.insertAdjacentHTML('beforeend', AD_SLOT_LB);
