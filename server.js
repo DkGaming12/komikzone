@@ -72,7 +72,7 @@ function scoreOf(m) {
   return m.user_rate != null ? String(m.user_rate) : '';
 }
 
-/** Indonesian relative time, e.g. "5 menit lalu" / "3 hari lalu" / "12 Jan 2026" */
+/** Indonesian short relative time, e.g. "3 jam" / "5 mnt" / "8 Sep" (fits card chips) */
 function relTime(iso) {
   if (!iso) return '';
   const t = new Date(iso);
@@ -80,10 +80,10 @@ function relTime(iso) {
   const diff = Date.now() - t.getTime();
   const MIN = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
   if (diff < MIN) return 'baru saja';
-  if (diff < HOUR) return `${Math.floor(diff / MIN)} menit lalu`;
-  if (diff < DAY) return `${Math.floor(diff / HOUR)} jam lalu`;
-  if (diff < 7 * DAY) return `${Math.floor(diff / DAY)} hari lalu`;
-  return t.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (diff < HOUR) return `${Math.floor(diff / MIN)} mnt`;
+  if (diff < DAY) return `${Math.floor(diff / HOUR)} jam`;
+  if (diff < 7 * DAY) return `${Math.floor(diff / DAY)} hr`;
+  return t.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 }
 
 /** Map a Shinigami manga object to the card shape the frontend expects */

@@ -1866,36 +1866,41 @@ body::before {
   margin-top: auto;
 }
 
+/* Baris chapter datar ala Shinigami: nomor kiri, waktu pendek kanan */
 .kc-ch {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 6px;
   background: rgba(255, 255, 255, .04);
   padding: 5px 9px;
-  border-radius: var(--rf);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all var(--t);
-  border: 1px solid var(--border2);
+  transition: background var(--t);
 }
 
 .kc-ch:hover {
-  background: var(--grad);
-  border-color: transparent;
-  box-shadow: 0 3px 14px rgba(124, 92, 255, .45);
+  background: rgba(124, 92, 255, .16);
 }
 
 .kc-ch-num {
-  font-size: .65rem;
+  flex: 1;
+  min-width: 0;
+  font-size: .66rem;
   font-weight: 600;
-  color: var(--white);
+  color: var(--txt2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 65%;
+}
+
+.kc-ch:hover .kc-ch-num {
+  color: var(--txt);
 }
 
 .kc-ch-time {
-  font-size: .55rem;
+  flex-shrink: 0;
+  font-size: .58rem;
   color: var(--txt3);
   font-weight: 500;
 }
@@ -2999,6 +3004,31 @@ body::before {
 
   .kc-vol {
     font-size: .6rem;
+  }
+
+  /* Baris chapter: lebih ringkas agar "Chapter 123" + waktu tetap muat.
+     Kata "Chapter" disingkat "Ch." supaya nomor tidak terpotong. */
+  .kc-ch {
+    padding: 4px 7px;
+    gap: 4px;
+    border-radius: 6px;
+  }
+
+  .kc-ch-num {
+    font-size: .6rem;
+  }
+
+  .kc-ch-word {
+    display: none;
+  }
+
+  .kc-ch-num:has(.kc-ch-word)::before {
+    content: 'Ch.';
+    margin-right: 2px;
+  }
+
+  .kc-ch-time {
+    font-size: .53rem;
   }
 
   /* Update rows */

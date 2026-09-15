@@ -110,11 +110,18 @@ function buildCard(m, opts = {}) {
   const safeTitle = esc(m.title || '');
 
   // Build chapter badges (max 2) below title
+  // "Chapter" dibungkus span agar bisa disingkat jadi "Ch." di layar kecil (CSS)
+  const splitChTitle = t => {
+    const s = String(t || '');
+    return /^Chapter\s+/i.test(s)
+      ? `<span class="kc-ch-word">Chapter</span> ${esc(s.replace(/^Chapter\s+/i, ''))}`
+      : esc(s || 'Chapter');
+  };
   let chaptersHtml = '';
   if (m.chapters && m.chapters.length > 0) {
     chaptersHtml = `<div class="kc-chapters">` + m.chapters.slice(0, 2).map(c => `
       <div class="kc-ch" data-ch="${esc(c.slug)}" data-title="${safeTitle}">
-        <span class="kc-ch-num">${esc(c.title || 'Chapter')}</span>
+        <span class="kc-ch-num">${splitChTitle(c.title)}</span>
         <span class="kc-ch-time">${esc(c.date || '')}</span>
       </div>`).join('') + `</div>`;
   } else if (m.latestChapter) {
