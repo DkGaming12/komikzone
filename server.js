@@ -1,12 +1,11 @@
 /**
  * KomikZone Backend Proxy Server
- * Scrapes KomikKita (WordPress/Madara) and serves JSON API
- * Port: 3001 (frontend at 8080 / static)
+ * Serves JSON API from Shinigami Scans public API (api.shngm.io)
+ * Port: 3001 (frontend served from same origin / static)
  */
 
 const express = require('express');
 const cors = require('cors');
-const cheerio = require('cheerio');
 const path = require('path');
 
 const app = express();
@@ -15,33 +14,32 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.static(path.join(__dirname)));
 
-/* ── helpers ─────────────────────────────────────────── */
-const BASE = 'https://komikkita.net';
+/* ── Shinigami API helpers ────────────────────────────── */
+const API = 'https://api.shngm.io/v1';
 
-const HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36',
-  'Accept-Language': 'id-ID,id;q=0.9',
-  'Referer': BASE
-};
-
-// Simple in-memory cache { url: { ts, html } }
+// Simple in-memory cache { url: { ts, json } }
 const cache = new Map();
 const MAX_CACHE = 200;
 
-async function getHTML(url, ttl = 300_000) {
+async function getJSON(pathAndQuery, ttl = 300_000) {
+  const url = `${API}${pathAndQuery}`;
   const hit = cache.get(url);
-  if (hit && Date.now() - hit.ts < ttl) return hit.html;
+  if (hit && Date.now() - hit.ts < ttl) return hit.json;
 
   // Global fetch (Node 18+) with a real timeout — retry once on network failure
   let lastErr;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const r = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(15000) });
+      const r = await fetch(url, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(15000)
+      });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const html = await r.text();
+      const json = await r.json();
+      if (json.retcode !== 0 || !json.data) throw new Error(json.message || 'API error');
       if (cache.size > MAX_CACHE) cache.clear();
-      cache.set(url, { ts: Date.now(), html });
-      return html;
+      cache.set(url, { ts: Date.now(), json });
+      return json;
     } catch (e) {
       lastErr = e;
       if (attempt === 0) await new Promise(res => setTimeout(res, 800));
@@ -50,172 +48,142 @@ async function getHTML(url, ttl = 300_000) {
   throw new Error(`Gagal mengambil ${url} (${lastErr?.message || 'network error'})`);
 }
 
-/** Extract last path segment, e.g. "/manga/one-piece/" → "one-piece" */
-function slugFromHref(href) {
-  if (!href) return '';
-  try {
-    const p = new URL(href, BASE).pathname;
-    return p.replace(/^\/+/, '').replace(/\/+$/, '');
-  } catch {
-    return String(href).replace(/^\/+/, '').replace(/\/+$/, '');
-  }
+/* ── field mapping (keep response shapes identical to the old scraper) ── */
+
+const STATUS_MAP = { 1: 'Ongoing', 2: 'Completed', 3: 'Hiatus' };
+
+// /manga/top responses carry no taxonomy — fall back to country of origin
+const COUNTRY_TYPE = { JP: 'Manga', KR: 'Manhwa', CN: 'Manhua' };
+
+function typeOf(m) {
+  return (m.taxonomy?.Format || [])[0]?.name || COUNTRY_TYPE[m.country_id] || '';
 }
 
-/** Manga slug from any href (strips optional "manga/" folder) */
-function mangaSlugFromHref(href) {
-  return slugFromHref(href).replace(/^manga\//, '');
+function genresOf(m, n = 4) {
+  return (m.taxonomy?.Genre || []).map(g => g.name).slice(0, n);
 }
 
-function imgSrc($, el) {
-  if (!el || !el.length) return '';
-  return (el.attr('data-src') || el.attr('data-lazy-src') || el.attr('data-cfsrc') || el.attr('src') || '').trim();
+function coverOf(m) {
+  // portrait crop fits 2:3 cards best; fall back to the wide banner
+  return m.cover_portrait_url || m.cover_image_url || '';
 }
 
-/** Parse list items (.bsx cards) shared by list/search/top/genre endpoints */
-function parseBsxList($) {
-  const items = [];
-  $('.listupd .bsx').each((_, el) => {
-    const title = $(el).find('.tt').first().text().trim();
-    const href = $(el).find('a').first().attr('href') || '';
-    const img = imgSrc($, $(el).find('img').first());
-    const score = $(el).find('.rating span, .numscore').first().text().trim();
-    const type = $(el).find('.type').first().text().trim();
-    const latestChapter = $(el).find('.epxs').first().text().trim();
-    const slug = mangaSlugFromHref(href);
-    if (title && slug) items.push({ title, slug, img, score, type, latestChapter });
-  });
-  return items;
+function scoreOf(m) {
+  return m.user_rate != null ? String(m.user_rate) : '';
 }
 
-function parseTotalPages($) {
-  const nums = $('.pagination .page-numbers')
-    .map((_, el) => parseInt($(el).text()))
-    .get()
-    .filter(n => !isNaN(n));
-  return nums.length ? Math.max(...nums) : 1;
+/** Indonesian relative time, e.g. "5 menit lalu" / "3 hari lalu" / "12 Jan 2026" */
+function relTime(iso) {
+  if (!iso) return '';
+  const t = new Date(iso);
+  if (isNaN(t)) return '';
+  const diff = Date.now() - t.getTime();
+  const MIN = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
+  if (diff < MIN) return 'baru saja';
+  if (diff < HOUR) return `${Math.floor(diff / MIN)} menit lalu`;
+  if (diff < DAY) return `${Math.floor(diff / HOUR)} jam lalu`;
+  if (diff < 7 * DAY) return `${Math.floor(diff / DAY)} hari lalu`;
+  return t.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/** Map a Shinigami manga object to the card shape the frontend expects */
+function mapItem(m) {
+  return {
+    title: m.title,
+    slug: m.manga_id,
+    img: coverOf(m),
+    score: scoreOf(m),
+    type: typeOf(m),
+    latestChapter: m.latest_chapter_number != null ? `Ch. ${m.latest_chapter_number}` : ''
+  };
+}
+
+/** Map a chapter-list entry: { title, slug, date } (newest-first preserved) */
+function mapChapter(c) {
+  return {
+    title: `Chapter ${c.chapter_number}`,
+    slug: c.chapter_id,
+    date: relTime(c.release_date || c.created_at)
+  };
+}
+
+/** Chapter list of a manga (single page, big page_size covers most series) */
+function fetchChapters(mangaId) {
+  return getJSON(
+    `/chapter/${mangaId}/list?page=1&page_size=500&sort_by=chapter_number&sort_order=desc`,
+    300_000
+  ).then(r => (r.data || []).map(mapChapter)).catch(() => []);
 }
 
 /* ── /api/home ───────────────────────────────────────── */
 app.get('/api/home', async (req, res) => {
   try {
-    const html = await getHTML(`${BASE}/home/`);
-    const $ = cheerio.load(html);
+    const [rec, topDaily, topWeekly, topRated, updates, newProj] = await Promise.all([
+      getJSON('/manga/list?page=1&page_size=10&is_recommended=true&sort=rating&sort_order=desc'),
+      getJSON('/manga/top?filter=daily&page=1&page_size=12'),
+      getJSON('/manga/top?filter=weekly&page=1&page_size=10'),
+      getJSON('/manga/list?page=1&page_size=10&sort=rating&sort_order=desc'),
+      getJSON('/manga/list?page=1&page_size=16&type=project&is_update=true&sort=latest&sort_order=desc'),
+      getJSON('/manga/list?page=1&page_size=6&type=project&sort=latest&sort_order=desc')
+    ]);
 
-    // Popular from homepage widgets ("Populer Hari Ini" etc.)
-    let popular = [];
-    $('.widget_series .bsx, .bixbox.hothome .bsx, .popconslide .bsx').each((_, el) => {
-      const title = $(el).find('.tt, a[title]').first().attr('title') || $(el).find('.tt').first().text().trim();
-      const href = $(el).find('a').first().attr('href') || '';
-      const img = imgSrc($, $(el).find('img').first());
-      const score = $(el).find('.rating span, .numscore').first().text().trim();
-      const type = ($(el).find('[class*="type"]').first().attr('class') || '').match(/(?:^|\s)(Manga|Manhwa|Manhua|Novel)(?:\s|$)/)?.[1] || '';
-      const slug = mangaSlugFromHref(href);
-      if (title && slug) popular.push({ title, slug, img, score, type });
-    });
+    // Featured hero slider — recommended titles with full metadata
+    const featured = (rec.data || []).map(m => ({
+      title: m.title,
+      slug: m.manga_id,
+      img: coverOf(m),
+      banner: m.cover_image_url || '',
+      score: scoreOf(m),
+      type: typeOf(m),
+      genres: genresOf(m),
+      synopsis: m.description || ''
+    })).slice(0, 7);
 
-    // Featured hero slider (real site slider: banner, score, type, genres, synopsis)
-    const featured = [];
-    const seenFeat = new Set();
-    $('.swiper-slide').each((_, el) => {
-      const s = $(el);
-      // <a href><span class="name">Title</span></a> — .name is a child span
-      const nameEl = s.find('.name').first();
-      const linkEl = nameEl.closest('a');
-      const slug = mangaSlugFromHref(linkEl.attr('href'));
-      if (!slug || seenFeat.has(slug)) return;
-      const genres = [];
-      s.find('.metas-genres-values a').each((_, g) => {
-        const gn = $(g).text().trim();
-        if (gn) genres.push(gn);
-      });
-      featured.push({
-        title: nameEl.text().trim(),
-        slug,
-        img: s.find('.bigbanner').attr('data-bg') || imgSrc($, s.find('.bigbanner')),
-        banner: s.find('.bigbanner').attr('data-bg') || '',
-        score: s.find('.meta-score-values').text().trim(),
-        type: s.find('.meta-type-values').text().trim(),
-        genres: genres.slice(0, 4),
-        synopsis: s.find('.desc').text().trim()
-      });
-      seenFeat.add(slug);
-    });
+    // Latest updates with up to 3 chapter badges each
+    const updatesMapped = (updates.data || []).map(m => ({
+      title: m.title,
+      slug: m.manga_id,
+      img: coverOf(m),
+      chapters: (m.chapters || []).slice(0, 3).map(c => ({
+        title: `Chapter ${c.chapter_number}`,
+        slug: c.chapter_id,
+        date: relTime(c.created_at)
+      }))
+    }));
 
-    // Fallback: if slider empty, use top popular items
-    const featuredFinal = featured.length
-      ? featured.slice(0, 7)
-      : popular.slice(0, 6).map(m => ({ ...m, genres: [] }));
+    // Sidebar ranked lists. Shinigami only exposes daily & weekly views,
+    // so "Hari Ini" uses daily and "Top Rating" uses all-time user rating.
+    const rankList = (arr) => (arr || []).slice(0, 10).map((m, i) => ({
+      rank: i + 1,
+      title: m.title,
+      slug: m.manga_id,
+      img: coverOf(m),
+      score: scoreOf(m),
+      pct: Math.round(parseFloat(m.user_rate || 0) * 10),
+      genres: genresOf(m, 3)
+    }));
 
-    // Fallback: fetch popular list page
-    if (!popular.length) {
-      try {
-        const popHtml = await getHTML(`${BASE}/manga/?order=popular`, 120_000);
-        popular = parseBsxList(cheerio.load(popHtml)).slice(0, 12);
-      } catch (e) {
-        console.warn('Popular fallback failed:', e.message);
-      }
-    } else {
-      popular = popular.slice(0, 12);
-    }
+    const popularRanked = {
+      weekly: rankList(topWeekly.data),
+      daily: rankList(topDaily.data),
+      rating: rankList(topRated.data)
+    };
 
-    // Latest updates (list with latest 3 chapters each)
-    const updates = [];
-    $('.listupd .uta').each((_, el) => {
-      const title = $(el).find('.luf .imgu img').attr('title') || $(el).find('h4').first().text().trim();
-      const href = $(el).find('a').first().attr('href') || '';
-      const img = imgSrc($, $(el).find('img').first());
-      const chapters = [];
-      $(el).find('.luf ul li').each((_, li) => {
-        const chHref = $(li).find('a').attr('href') || '';
-        const chTitle = $(li).find('a').text().trim();
-        const chDate = $(li).find('span').text().trim();
-        const chSlug = slugFromHref(chHref);
-        if (chTitle && chSlug) chapters.push({ title: chTitle, slug: chSlug, date: chDate });
-      });
-      const slug = mangaSlugFromHref(href);
-      if (title && slug) updates.push({ title, slug, img, chapters: chapters.slice(0, 3) });
-    });
-
-    // Sidebar: Popular Series (Mingguan / Bulanan / Semua) — ranked list w/ rating
-    const popularRanked = { weekly: [], monthly: [], alltime: [] };
-    $('#sidebar .serieslist.pop').each((_, ul) => {
-      const range = (($(ul).attr('class') || '').match(/wpop-(\w+)/) || [])[1];
-      if (!range || !(range in popularRanked)) return;
-      $(ul).find('li').each((__, el) => {
-        const li = $(el);
-        const title = li.find('h2 a').first().text().trim();
-        const slug = mangaSlugFromHref(li.find('h2 a').first().attr('href'));
-        if (!title || !slug) return;
-        popularRanked[range].push({
-          rank: parseInt(li.find('.ctr').text()) || popularRanked[range].length + 1,
-          title, slug,
-          img: imgSrc($, li.find('img').first()),
-          score: li.find('.numscore').first().text().trim(),
-          pct: ((li.find('.rtb span').attr('style') || '').match(/width:\s*(\d+)%/) || [])[1] || '',
-          genres: li.find('span a[rel="tag"]').map((_, g) => $(g).text().trim()).get().slice(0, 3)
-        });
-      });
-      popularRanked[range] = popularRanked[range].slice(0, 10);
-    });
-
-    // Sidebar: New Series (sidebar list without rank numbers)
-    const newSeries = [];
-    $('#sidebar .serieslist').not('.pop').first().find('li').each((_, el) => {
-      const li = $(el);
-      const title = li.find('h2 a').first().text().trim();
-      const slug = mangaSlugFromHref(li.find('h2 a').first().attr('href'));
-      if (!title || !slug) return;
-      newSeries.push({
-        title, slug,
-        img: imgSrc($, li.find('img').first()),
-        genres: li.find('span a[rel="tag"]').map((_, g) => $(g).text().trim()).get().slice(0, 3),
-        year: (li.find('.leftseries span').last().text() || '').trim().slice(0, 4)
-      });
-    });
+    // New series (sidebar)
+    const newSeries = (newProj.data || []).map(m => ({
+      title: m.title,
+      slug: m.manga_id,
+      img: coverOf(m),
+      genres: genresOf(m, 3),
+      year: m.release_year ? String(m.release_year) : ''
+    }));
 
     res.json({
-      featured: featuredFinal, updates: updates.slice(0, 16), popular,
-      popularRanked, newSeries: newSeries.slice(0, 6)
+      featured,
+      updates: updatesMapped,
+      popular: (topDaily.data || []).map(mapItem).slice(0, 12),
+      popularRanked,
+      newSeries
     });
   } catch (e) {
     console.error('/api/home error:', e.message);
@@ -227,13 +195,38 @@ app.get('/api/home', async (req, res) => {
 app.get('/api/list', async (req, res) => {
   try {
     const { page = 1, order = 'update', type = '', status = '', genre = '' } = req.query;
-    let url = `${BASE}/manga/?page=${page}&order=${order}`;
-    if (type) url += `&type=${encodeURIComponent(type)}`;
-    if (status) url += `&status=${encodeURIComponent(status)}`;
-    if (genre) url += `&genre=${encodeURIComponent(genre)}`;
+    const fmt = String(type).toLowerCase();
 
-    const $ = cheerio.load(await getHTML(url, 60_000));
-    res.json({ items: parseBsxList($), page: Number(page), totalPages: parseTotalPages($) });
+    let items, totalPages;
+
+    if (order === 'popular' && !fmt) {
+      // Real view-based popularity: weekly top ranking.
+      // NOTE: /manga/top ignores the format param, so a type filter
+      // falls through to top-rated within that format below.
+      const r = await getJSON(`/manga/top?filter=weekly&page=${page}&page_size=24`);
+      items = (r.data || []).map(mapItem);
+      totalPages = r.meta?.total_page || 1;
+    } else {
+      // 'update' (default) → newest; 'popular' + type → top rated within format
+      const sort = order === 'popular' ? 'rating' : 'latest';
+      let q = `/manga/list?page=${page}&page_size=24&sort=${sort}&sort_order=desc`;
+      if (fmt) q += `&format=${encodeURIComponent(fmt)}`;
+      if (genre) q += `&genre_include=${encodeURIComponent(genre)}&genre_include_mode=and`;
+      const r = await getJSON(q);
+      items = (r.data || []).map(mapItem);
+      totalPages = r.meta?.total_page || 1;
+    }
+
+    // Status filter is not supported upstream — filter this page client-of-server side
+    if (status) {
+      const want = status.toLowerCase().startsWith('ongo') ? ['ongoing'] :
+        status.toLowerCase().startsWith('compl') || status.toLowerCase().startsWith('selesai') ? ['completed'] : null;
+      if (want) {
+        items = items.filter(m => want.includes(String(m.status || '').toLowerCase()));
+      }
+    }
+
+    res.json({ items, page: Number(page), totalPages });
   } catch (e) {
     console.error('/api/list error:', e.message);
     res.status(502).json({ error: 'Gagal memuat daftar komik.' });
@@ -246,90 +239,76 @@ app.get('/api/search', async (req, res) => {
     const { q = '' } = req.query;
     if (!q) return res.json({ items: [] });
 
-    const $ = cheerio.load(await getHTML(`${BASE}/?s=${encodeURIComponent(q)}`, 60_000));
-    res.json({ items: parseBsxList($).slice(0, 10) });
+    const r = await getJSON(
+      `/manga/list?q=${encodeURIComponent(q)}&page=1&page_size=10&sort=latest&sort_order=desc`,
+      120_000
+    );
+    res.json({ items: (r.data || []).map(mapItem) });
   } catch (e) {
     console.error('/api/search error:', e.message);
     res.status(502).json({ error: 'Pencarian gagal.' });
   }
 });
 
-/* ── /api/manga/:slug ────────────────────────────────── */
+/* ── /api/manga/:slug (slug = Shinigami manga UUID) ──── */
 app.get('/api/manga/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
-    const url = `${BASE}/manga/${slug}/`;
-    const $ = cheerio.load(await getHTML(url));
+    const [detailR, chapters] = await Promise.all([
+      getJSON(`/manga/detail/${slug}`),
+      fetchChapters(slug)
+    ]);
+    const m = detailR.data;
+    if (!m || !m.title) return res.status(404).json({ error: 'Komik tidak ditemukan.' });
 
-    const title = $('h1.entry-title').first().text().trim();
-    if (!title) return res.status(404).json({ error: 'Komik tidak ditemukan.' });
-
-    const altTitle = $('.seriestualt').first().text().trim();
-    const img = imgSrc($, $('.thumb img, .sertothumb img, .thumbook img').first());
-    const synopsis = $('.entry-content p, .synp p, .entry-content').first().text().trim();
-    const score = $('.rating-num, .num').first().text().trim();
-    const status = $('.tsinfo .imptdt:contains("Status") i').first().text().trim()
-      || $('.infotable td:contains("Ongoing"), .infotable td:contains("Completed")').first().text().trim();
-    const type = $('.tsinfo .imptdt:contains("Type") a').first().text().trim()
-      || $('.infotable td:contains("Manga"), .infotable td:contains("Manhwa"), .infotable td:contains("Manhua")').first().text().trim();
-    const author = $('.tsinfo .imptdt:contains("Author") i').first().text().trim()
-      || $('.infotable tr:contains("Author") td:last-child').first().text().trim();
-    const genres = [];
-    $('.mgen a').each((_, a) => genres.push($(a).text().trim()));
-
-    // Chapter list is fully rendered in the HTML (newest first)
-    const chapters = [];
-    $('#chapterlist li, .eplister ul li').each((_, el) => {
-      const chHref = $(el).find('a').attr('href') || '';
-      const chTitle = $(el).find('.chapternum').first().text().trim() || $(el).find('span').first().text().trim();
-      const chDate = $(el).find('.chapterdate').first().text().trim();
-      const chSlug = slugFromHref(chHref);
-      if (chSlug) chapters.push({ title: chTitle || 'Chapter', slug: chSlug, date: chDate });
+    res.json({
+      title: m.title,
+      altTitle: m.alternative_title || '',
+      img: coverOf(m),
+      synopsis: m.description || '',
+      score: scoreOf(m),
+      status: STATUS_MAP[m.status] || '',
+      type: typeOf(m),
+      author: (m.taxonomy?.Author || []).map(a => a.name).join(', '),
+      genres: (m.taxonomy?.Genre || []).map(g => g.name),
+      chapters
     });
-
-    res.json({ title, altTitle, img, synopsis, score, status, type, author, genres, chapters });
   } catch (e) {
     console.error('/api/manga/:slug error:', e.message);
     res.status(502).json({ error: 'Gagal memuat detail komik.' });
   }
 });
 
-/* ── /api/chapter?slug= ──────────────────────────────── */
+/* ── /api/chapter?slug= (slug = Shinigami chapter UUID) ─ */
 app.get('/api/chapter', async (req, res) => {
   try {
-    const slug = slugFromHref(req.query.slug || '');
+    const slug = String(req.query.slug || '').trim();
     if (!slug) return res.status(400).json({ error: 'Slug chapter tidak valid.' });
 
-    const url = `${BASE}/${slug}/`;
-    const $ = cheerio.load(await getHTML(url, 3_600_000)); // 1hr cache
+    const r = await getJSON(`/chapter/detail/${slug}`, 3_600_000); // 1hr cache
+    const d = r.data;
+    if (!d?.chapter?.data) return res.status(404).json({ error: 'Chapter tidak ditemukan.' });
 
-    const images = [];
-    const seen = new Set();
-    $('.reading-content .page-break img, .reader-area img, #readerarea img').each((_, img) => {
-      let src = imgSrc($, img);
-      if (!src) return;
-      try { src = new URL(src, BASE).href; } catch { /* keep as-is */ }
-      // Skip tracking pixels / icons
-      if (/pixel|logo|banner/i.test(src) || src.endsWith('.gif') || src.endsWith('.svg')) return;
-      if (!seen.has(src)) { seen.add(src); images.push(src); }
+    const base = (d.base_url || 'https://assets.shngm.id') + d.chapter.path;
+    const images = d.chapter.data.map(f => base + f);
+
+    // Include the manga's chapter list + cover so the reader can navigate
+    // (and recover context when opened directly from history/cards)
+    const [chapters, detailR] = await Promise.all([
+      fetchChapters(d.manga_id),
+      getJSON(`/manga/detail/${d.manga_id}`).catch(() => null)
+    ]);
+    const md = detailR?.data;
+
+    res.json({
+      images,
+      chapterTitle: `Chapter ${d.chapter_number}`,
+      sourceUrl: `https://11.shinigami.asia/chapter/${slug}`,
+      mangaSlug: d.manga_id,
+      mangaTitle: md?.title || '',
+      img: md ? coverOf(md) : '',
+      chapters
     });
-
-    // Fallback: ts_reader JSON embedded in page
-    if (!images.length) {
-      const scripts = $('script').map((_, s) => $(s).html()).get().join('\n');
-      const m = scripts.match(/ts_reader\.run\(\s*(\{[\s\S]*?\})\s*\)\s*;/);
-      if (m) {
-        try {
-          const data = JSON.parse(m[1]);
-          for (const src of (data?.sources?.[0]?.images || [])) {
-            if (src && !seen.has(src)) { seen.add(src); images.push(src); }
-          }
-        } catch { /* ignore bad JSON */ }
-      }
-    }
-
-    const chapterTitle = $('h1.entry-title').first().text().trim();
-    res.json({ images, chapterTitle, sourceUrl: url });
   } catch (e) {
     console.error('/api/chapter error:', e.message);
     res.status(502).json({ error: 'Gagal memuat gambar chapter.' });
@@ -340,11 +319,24 @@ app.get('/api/chapter', async (req, res) => {
 app.get('/api/top', async (req, res) => {
   try {
     const { type = '', page = 1 } = req.query;
-    let url = `${BASE}/manga/?page=${page}&order=popular`;
-    if (type) url += `&type=${encodeURIComponent(type)}`;
+    const fmt = String(type).toLowerCase();
 
-    const $ = cheerio.load(await getHTML(url, 120_000));
-    res.json({ items: parseBsxList($), page: Number(page), totalPages: parseTotalPages($) });
+    // /manga/top ignores the format param — with a type filter,
+    // rank by user rating within that format instead
+    let r;
+    if (fmt) {
+      r = await getJSON(
+        `/manga/list?page=${page}&page_size=24&sort=rating&sort_order=desc&format=${encodeURIComponent(fmt)}`,
+        120_000
+      );
+    } else {
+      r = await getJSON(`/manga/top?filter=weekly&page=${page}&page_size=24`, 120_000);
+    }
+    res.json({
+      items: (r.data || []).map(mapItem),
+      page: Number(page),
+      totalPages: r.meta?.total_page || 1
+    });
   } catch (e) {
     console.error('/api/top error:', e.message);
     res.status(502).json({ error: 'Gagal memuat top komik.' });
@@ -354,15 +346,10 @@ app.get('/api/top', async (req, res) => {
 /* ── /api/genres ─────────────────────────────────────── */
 app.get('/api/genres', async (req, res) => {
   try {
-    const $ = cheerio.load(await getHTML(`${BASE}/genres/`, 3_600_000));
-    const seen = new Set();
-    const genres = [];
-    $('a[href*="/genres/"]').each((_, a) => {
-      // Strip trailing count, e.g. "Action 1395" → "Action"
-      const name = $(a).text().replace(/\s*\d+\s*$/, '').trim();
-      const slug = slugFromHref($(a).attr('href')).replace(/^genres\//, '');
-      if (name && slug && !seen.has(slug)) { seen.add(slug); genres.push({ name, slug }); }
-    });
+    const r = await getJSON('/genre/list', 3_600_000);
+    const genres = (r.data || [])
+      .filter(t => t.type === 'Genre' && t.name && t.slug)
+      .map(t => ({ name: t.name, slug: t.slug }));
     res.json({ genres });
   } catch (e) {
     console.error('/api/genres error:', e.message);
@@ -375,13 +362,24 @@ app.get('/api/genre/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
     const { page = 1 } = req.query;
-    const url = `${BASE}/genres/${slug}/?page=${page}`;
-    const $ = cheerio.load(await getHTML(url, 120_000));
+    const r = await getJSON(
+      `/manga/list?page=${page}&page_size=24&sort=latest&sort_order=desc` +
+      `&genre_include=${encodeURIComponent(slug)}&genre_include_mode=and`,
+      120_000
+    );
+    // Genre display name: prefer the cached genre list, else the slug
+    let genreName = slug;
+    try {
+      const g = await getJSON('/genre/list', 3_600_000);
+      const found = (g.data || []).find(t => t.slug === slug);
+      if (found?.name) genreName = found.name;
+    } catch { /* keep slug as name */ }
+
     res.json({
-      items: parseBsxList($),
+      items: (r.data || []).map(mapItem),
       page: Number(page),
-      totalPages: parseTotalPages($),
-      genreName: slug
+      totalPages: r.meta?.total_page || 1,
+      genreName
     });
   } catch (e) {
     console.error('/api/genre/:slug error:', e.message);
@@ -392,7 +390,7 @@ app.get('/api/genre/:slug', async (req, res) => {
 /* ── Server start or Export for Vercel ──────────────── */
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   app.listen(PORT, () => {
-    console.log(`[KomikZone Proxy] running → http://localhost:${PORT}`);
+    console.log(`[KomikZone Proxy] running → http://localhost:${PORT} (source: Shinigami)`);
   });
 }
 

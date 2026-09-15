@@ -13,7 +13,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260920" />
+  <link rel="stylesheet" href="style.css?v=20260921" />
 </head>
 
 <body>
@@ -75,7 +75,7 @@
   <!-- notice bar -->
   <div class="notice-bar" id="notice-bar">
     <span class="notice-label">Notice</span>
-    <span class="notice-text">Data dari <strong>KomikKita</strong> · Gratis tanpa login! 🇮🇩</span>
+    <span class="notice-text">Data dari <strong>Shinigami</strong> · Gratis tanpa login! 🇮🇩</span>
     <button class="notice-close" id="notice-close">✕</button>
   </div>
 
@@ -205,8 +205,8 @@
             <h3 class="sw-head">🔥 Popular Series</h3>
             <div class="wpop-tabs" id="wpop-tabs">
               <button class="wtab active" data-range="weekly">Mingguan</button>
-              <button class="wtab" data-range="monthly">Bulanan</button>
-              <button class="wtab" data-range="alltime">Semua</button>
+              <button class="wtab" data-range="daily">Hari Ini</button>
+              <button class="wtab" data-range="rating">Top Rating</button>
             </div>
             <div class="wpop-list" id="wpop-list">
               <div class="sw-skel"></div><div class="sw-skel"></div><div class="sw-skel"></div>
@@ -233,7 +233,7 @@
     <div id="pg-explore" class="pg">
       <div class="pg-header">
         <h1>🔍 Explore Komik</h1>
-        <p>Jelajahi semua manga, manhwa, dan manhua bahasa Indonesia dari KomikKita</p>
+        <p>Jelajahi semua manga, manhwa, dan manhua bahasa Indonesia dari Shinigami</p>
         <div class="filt-row">
           <button class="filt active" data-t="">Semua</button>
           <button class="filt" data-t="Manga">Manga</button>
@@ -245,13 +245,7 @@
           <select id="exp-sort">
             <option value="update">Terbaru</option>
             <option value="popular">Terpopuler</option>
-            <option value="title">Judul A–Z</option>
-          </select>
-          <span style="margin-left:1rem">Status:</span>
-          <select id="exp-status">
-            <option value="">Semua</option>
-            <option value="Ongoing">Ongoing</option>
-            <option value="Completed">Selesai</option>
+            <option value="rating">Skor Tertinggi</option>
           </select>
         </div>
       </div>
@@ -263,7 +257,7 @@
     <div id="pg-top" class="pg">
       <div class="pg-header">
         <h1>🏆 Top Komik</h1>
-        <p>Komik terpopuler di KomikKita, bahasa Indonesia lengkap!</p>
+        <p>Komik terpopuler di Shinigami, bahasa Indonesia lengkap!</p>
         <div class="filt-row">
           <button class="filt active" data-t="all">Semua</button>
           <button class="filt" data-t="Manga">Manga</button>
@@ -298,7 +292,7 @@
     <div id="pg-allseries" class="pg">
       <div class="pg-header">
         <h1>📚 All Series</h1>
-        <p>Semua komik tersedia di KomikKita, bahasa Indonesia!</p>
+        <p>Semua komik tersedia di Shinigami, bahasa Indonesia!</p>
         <div class="filt-row">
           <button class="filt active" data-t="">Semua</button>
           <button class="filt" data-t="manga">Manga</button>
@@ -426,7 +420,7 @@
       return Array(n).fill(`<div class="skel-card"><div class="skel-img"></div><div class="skel-line" style="margin:.7rem .7rem .3rem"></div><div class="skel-line s" style="margin:0 .7rem .7rem"></div></div>`).join('');
     }
   </script>
-  <script src="app.js?v=20260920"></script>
+  <script src="app.js?v=20260921"></script>
 </body>
 
 </html>

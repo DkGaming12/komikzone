@@ -1,6 +1,6 @@
 /* =====================================================
    KomikZone – app.js
-   Data source: KomikKita via proxy
+   Data source: Shinigami (api.shngm.io) via proxy
    ===================================================== */
 
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -61,7 +61,7 @@ function retryBox(msg = 'Gagal memuat data.') {
 let curPg = 'home';
 let prevPg = 'home';
 
-let expSort = 'update', expType = '', expStatus = '';
+let expSort = 'update', expType = '';
 let topType = '';
 
 let slideIdx = 0, slideN = 0, slideTimer = null;
@@ -627,7 +627,6 @@ async function loadExplore(pg = 1) {
   gridLoading('exp-grid');
   let url = `${PROXY}/api/list?page=${pg}&order=${expSort}`;
   if (expType) url += `&type=${encodeURIComponent(expType)}`;
-  if (expStatus) url += `&status=${encodeURIComponent(expStatus)}`;
   const d = await api(url);
   if (!d) {
     $('exp-grid').innerHTML = retryBox('Daftar komik gagal dimuat.');
@@ -644,7 +643,6 @@ $$('#pg-explore .filt').forEach(b => b.addEventListener('click', () => {
   b.classList.add('active'); expType = b.dataset.t; loadExplore(1);
 }));
 $('exp-sort').addEventListener('change', () => { expSort = $('exp-sort').value; loadExplore(1); });
-$('exp-status').addEventListener('change', () => { expStatus = $('exp-status').value; loadExplore(1); });
 
 /* ─────────────────────────────────────────────────────
    TOP
@@ -674,7 +672,7 @@ $$('#pg-top .filt').forEach(b => b.addEventListener('click', () => {
 ───────────────────────────────────────────────────── */
 async function loadAllSeries(pg = 1) {
   gridLoading('all-grid');
-  const d = await api(`${PROXY}/api/list?page=${pg}&order=title`);
+  const d = await api(`${PROXY}/api/list?page=${pg}&order=update`);
   if (!d) {
     $('all-grid').innerHTML = retryBox('Daftar seri gagal dimuat.');
     $('all-pager').innerHTML = '';
@@ -807,7 +805,7 @@ async function openDetail(slug) {
 
     <!-- Chapter list -->
     <div class="ch-section" id="ch-section">
-      <h3><span>📚 Daftar Chapter <span class="md-badge">KomikKita</span></span></h3>
+      <h3><span>📚 Daftar Chapter <span class="md-badge">Shinigami</span></span></h3>
       <div class="ch-list" id="ch-list">
         ${buildChapterList(d.chapters || [], slug)}
       </div>
@@ -909,15 +907,15 @@ async function openReader(chSlug, title) {
   pages.innerHTML = `<div class="reader-loading"><div class="spin"></div><p>Memuat data chapter…</p></div>`;
 
   // If _curChapters is empty (opened from history/cards without visiting detail),
-  // infer the manga slug from the chapter slug and fetch chapters on-the-fly.
+  // the chapter response carries the manga's chapter list + metadata — no guessing.
+  let chData = null;
   if (!_curChapters.length && chSlug) {
-    const mangaSlugGuess = chSlug.replace(/-chapter-[\d.-]+$/i, '');
-    const md = await api(`${PROXY}/api/manga/${encodeURIComponent(mangaSlugGuess)}`);
-    if (md && md.chapters && md.chapters.length) {
-      _curChapters = md.chapters.map(c => ({ slug: c.slug, title: c.title, date: c.date }));
-      _curTitle = md.title || title || '';
-      _curImg = md.img || '';
-      _curMangaSlug = mangaSlugGuess;
+    chData = await api(`${PROXY}/api/chapter?slug=${encodeURIComponent(chSlug)}`);
+    if (chData?.chapters?.length) {
+      _curChapters = chData.chapters.map(c => ({ slug: c.slug, title: c.title, date: c.date }));
+      _curMangaSlug = chData.mangaSlug || '';
+      if (!_curTitle) _curTitle = chData.mangaTitle || title || '';
+      if (!_curImg) _curImg = chData.img || '';
     }
   }
 
@@ -938,7 +936,7 @@ async function openReader(chSlug, title) {
 
   pages.innerHTML = `<div class="reader-loading"><div class="spin"></div><p>Memuat gambar chapter…</p></div>`;
 
-  const d = await api(`${PROXY}/api/chapter?slug=${encodeURIComponent(chSlug)}`);
+  const d = chData || await api(`${PROXY}/api/chapter?slug=${encodeURIComponent(chSlug)}`);
   const imgs = d?.images || [];
 
   if (!imgs.length) {
