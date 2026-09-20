@@ -2878,11 +2878,11 @@ body::before {
 
   /* Featured slider */
   .featured {
-    height: 350px;
+    height: 365px;
   }
 
   .feat-body {
-    padding: 1rem 1rem 1.75rem;
+    padding: 1rem 1rem 2.25rem;
     gap: .8rem;
   }
 
@@ -3027,11 +3027,11 @@ body::before {
 
   /* Featured */
   .featured {
-    height: 265px;
+    height: 290px;
   }
 
   .feat-body {
-    padding: .8rem;
+    padding: .8rem .8rem 2.2rem;
     gap: .55rem;
   }
 
