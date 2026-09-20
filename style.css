@@ -2550,9 +2550,9 @@ body::before {
 /* ============ PWA PROMPT ============ */
 .pwa-prompt {
   position: fixed;
-  bottom: calc(var(--bnav-h) + 16px);
+  top: 16px;
   left: 50%;
-  transform: translateX(-50%) translateY(150%);
+  transform: translateX(-50%) translateY(-150%);
   width: 90%;
   max-width: 400px;
   background: rgba(20, 20, 32, .98);
