@@ -1178,7 +1178,7 @@ async function openReader(chSlug, title) {
       this.page.url = window.location.href;
     };
     const s = document.createElement('script');
-    s.src = 'https://komikzone-demo.disqus.com/embed.js';
+    s.src = 'https://komikzone.disqus.com/embed.js';
     s.setAttribute('data-timestamp', +new Date());
     (document.head || document.body).appendChild(s);
   }
