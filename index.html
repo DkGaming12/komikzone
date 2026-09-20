@@ -560,6 +560,15 @@
         window.addEventListener('load', tryHide);
       }
     })();
+
+    // Service Worker Registration for PWABuilder detection
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => {
+          console.log('SW registration failed: ', err);
+        });
+      });
+    }
   </script>
   <script src="/app.js?v=20260930"></script>
 </body>

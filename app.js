@@ -1382,13 +1382,6 @@ function initPopup() {
 /* =====================================================
    PWA & INSTALL PROMPT LOGIC
    ===================================================== */
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(err => {
-      console.log('SW registration failed: ', err);
-    });
-  });
-}
 
 let deferredPrompt;
 const pwaPrompt = document.getElementById('pwa-prompt');

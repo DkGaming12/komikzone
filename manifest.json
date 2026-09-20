@@ -20,5 +20,22 @@
       "type": "image/png",
       "purpose": "any"
     }
+  ],
+  "id": "/?source=pwa",
+  "categories": ["entertainment", "books", "comics"],
+  "prefer_related_applications": false,
+  "screenshots": [
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
   ]
 }
