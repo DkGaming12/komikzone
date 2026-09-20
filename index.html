@@ -63,6 +63,15 @@
 
 <body>
 
+  <!-- ========== SPLASH SCREEN ========== -->
+  <div class="splash" id="splash">
+    <div class="splash-inner">
+      <img src="/icon-512.png" alt="KomikZone" class="splash-icon" />
+      <div class="splash-name">KomikZone</div>
+      <div class="splash-tagline">Manga · Manhwa · Manhua</div>
+    </div>
+  </div>
+
   <!-- ========== NAVBAR ========== -->
   <header class="navbar" id="navbar">
     <div class="nav-wrap">
@@ -527,6 +536,30 @@
     function skel(n) {
       return Array(n).fill(`<div class="skel-card"><div class="skel-img"></div><div class="skel-line" style="margin:.7rem .7rem .3rem"></div><div class="skel-line s" style="margin:0 .7rem .7rem"></div></div>`).join('');
     }
+
+    // Splash screen dismiss
+    (function() {
+      const splash = document.getElementById('splash');
+      if (!splash) return;
+      // Only show splash on first visit or PWA launch
+      const hideSplash = () => {
+        splash.classList.add('hide');
+        setTimeout(() => { splash.style.display = 'none'; }, 520);
+      };
+      // Hide after 1.8s minimum, or when page is interactive
+      const minTime = 1800;
+      const start = Date.now();
+      const tryHide = () => {
+        const elapsed = Date.now() - start;
+        const wait = Math.max(0, minTime - elapsed);
+        setTimeout(hideSplash, wait);
+      };
+      if (document.readyState === 'complete') {
+        tryHide();
+      } else {
+        window.addEventListener('load', tryHide);
+      }
+    })();
   </script>
   <script src="/app.js?v=20260930"></script>
 </body>

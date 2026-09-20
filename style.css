@@ -136,6 +136,76 @@ body::before {
 }
 
 /* Brand */
+/* ============ SPLASH SCREEN ============ */
+@keyframes splash-pop {
+  0%   { transform: scale(.6) translateY(10px); opacity: 0; }
+  60%  { transform: scale(1.08) translateY(0);  opacity: 1; }
+  100% { transform: scale(1)   translateY(0);   opacity: 1; }
+}
+
+@keyframes splash-fade-name {
+  0%   { opacity: 0; letter-spacing: .8em; }
+  100% { opacity: 1; letter-spacing: .15em; }
+}
+
+@keyframes splash-out {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #0a0a12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.splash.hide {
+  animation: splash-out .5s cubic-bezier(.4, 0, .2, 1) forwards;
+  pointer-events: none;
+}
+
+.splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.splash-icon {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+  animation: splash-pop .65s cubic-bezier(.34, 1.56, .64, 1) both;
+  filter: drop-shadow(0 0 30px rgba(139, 92, 246, .8)) drop-shadow(0 0 60px rgba(224, 79, 216, .4));
+}
+
+.splash-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: .15em;
+  background: linear-gradient(120deg, #b4a0ff 0%, #d67ef2 60%, #f0a0e8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: splash-fade-name .8s .3s ease both;
+}
+
+.splash-tagline {
+  font-size: .8rem;
+  color: var(--txt3);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: splash-fade-name .6s .6s ease forwards;
+}
+
+/* ============ BRAND / NAVBAR ============ */
 .brand {
   display: flex;
   align-items: center;
@@ -146,9 +216,8 @@ body::before {
 
 .brand-logo {
   flex-shrink: 0;
-  border-radius: 8px;
-  object-fit: cover;
-  filter: drop-shadow(0 2px 12px rgba(139, 92, 246, .55));
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(139, 92, 246, .7));
 }
 
 .brand-name {
