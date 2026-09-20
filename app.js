@@ -1395,29 +1395,56 @@ const pwaPrompt = document.getElementById('pwa-prompt');
 const btnInstall = document.getElementById('pwa-install');
 const btnCancel = document.getElementById('pwa-cancel');
 
-window.addEventListener('beforeinstallprompt', (e) => {
-  // Prevent Chrome 67 and earlier from automatically showing the prompt
-  e.preventDefault();
-  // Stash the event so it can be triggered later.
-  deferredPrompt = e;
-  
-  // Show our custom UI if not dismissed recently
+// Detect iOS
+const isIos = () => {
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  return /iphone|ipad|ipod/.test(userAgent);
+};
+const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+
+const showPwaPrompt = () => {
   if (pwaPrompt && !localStorage.getItem('kz_pwa_dismissed')) {
-    // delay showing prompt slightly
     setTimeout(() => {
       pwaPrompt.classList.add('show');
     }, 2000);
   }
+};
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  showPwaPrompt();
 });
 
+// Show prompt manually for iOS (since beforeinstallprompt is not supported)
+if (isIos() && !isInStandaloneMode()) {
+  showPwaPrompt();
+}
+
 if (btnInstall) {
-  btnInstall.addEventListener('click', async () => {
-    pwaPrompt.classList.remove('show');
+  btnInstall.addEventListener('click', () => {
+    if (isIos()) {
+      // iOS Safari requires manual action via Share menu
+      const textDiv = pwaPrompt.querySelector('.pwa-text');
+      if (textDiv) {
+        textDiv.innerHTML = '<h4>Install di iOS</h4><p>Tekan tombol <b>Share</b> 📤 di menu bawah, lalu pilih <b>Add to Home Screen</b> ➕</p>';
+      }
+      btnInstall.style.display = 'none';
+      btnCancel.textContent = 'Tutup';
+      return;
+    }
+
+    // Android / Desktop Chrome
     if (deferredPrompt) {
       deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      console.log(`User response to the install prompt: ${outcome}`);
-      deferredPrompt = null;
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+           pwaPrompt.classList.remove('show');
+        }
+        deferredPrompt = null;
+      }).catch(err => console.log('PWA error', err));
+    } else {
+      pwaPrompt.classList.remove('show');
     }
   });
 }
