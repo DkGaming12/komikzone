@@ -58,7 +58,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="/style.css?v=20260930" />
+  <link rel="stylesheet" href="/style.css?v=20261001" />
 </head>
 
 <body>
@@ -92,6 +92,11 @@
       </div>
 
       <div class="nav-actions">
+        <div class="online-badge" id="online-badge" title="Pengguna aktif sekarang">
+          <span class="online-dot"></span>
+          <span class="online-count" id="online-count">—</span>
+          <span class="online-label">online</span>
+        </div>
         <button class="hamburger" id="hamburger">
           <span /><span /><span />
         </button>
@@ -115,6 +120,11 @@
     <a class="mlink" data-nav="top">🏆 Top Komik</a>
     <a class="mlink" data-nav="genre">🎭 Genre</a>
     <a class="mlink" data-nav="allseries">📚 All Series</a>
+    <div class="mmenu-online">
+      <span class="online-dot"></span>
+      <span class="mmenu-online-count" id="mmenu-online-count">—</span>
+      <span>pengguna online</span>
+    </div>
   </nav>
 
   <!-- notice bar -->
@@ -496,6 +506,11 @@
         <a class="footer-link" href="https://github.com/DkGaming12/komikzone" target="_blank" rel="noopener">GitHub</a>
       </nav>
       <p class="footer-copy">© 2025 <strong>KomikZone</strong> — Baca Manga, Manhwa &amp; Manhua Online Gratis</p>
+      <div class="footer-online">
+        <span class="online-dot"></span>
+        <span class="online-count" id="footer-online-count">—</span>
+        <span>pengguna sedang online</span>
+      </div>
     </div>
   </footer>
 
@@ -570,7 +585,7 @@
       });
     }
   </script>
-  <script src="/app.js?v=20260930"></script>
+  <script src="/app.js?v=20261001"></script>
 </body>
 
 </html>

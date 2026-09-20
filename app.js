@@ -422,9 +422,7 @@ $$('#reko-blk .filt').forEach(btn => btn.addEventListener('click', () => {
 }));
 
 function updateRekoPerPage() {
-  if (window.innerWidth <= 480) _rekoPerPage = 2;
-  else if (window.innerWidth <= 768) _rekoPerPage = 3;
-  else _rekoPerPage = 4;
+  _rekoPerPage = 4;
 }
 
 let _resizeT;
@@ -1449,3 +1447,120 @@ window.addEventListener('appinstalled', () => {
   if (pwaPrompt) pwaPrompt.classList.remove('show');
   deferredPrompt = null;
 });
+
+/* ─────────────────────────────────────────────────────
+   ONLINE USER COUNTER — SSE realtime
+───────────────────────────────────────────────────── */
+(function initOnlineCounter() {
+  const navCount = document.getElementById('online-count');
+  const footerCount = document.getElementById('footer-online-count');
+  const mmenuCount = document.getElementById('mmenu-online-count');
+
+  let _currentCount = null;
+  let _animFrame = null;
+
+  function updateText(n) {
+    const text = n.toLocaleString('id-ID');
+    if (navCount) navCount.textContent = text;
+    if (footerCount) footerCount.textContent = text;
+    if (mmenuCount) mmenuCount.textContent = text;
+  }
+
+  function animateCount(target) {
+    if (typeof target !== 'number' || isNaN(target)) return;
+    if (_currentCount === null) {
+      _currentCount = target;
+      updateText(target);
+      return;
+    }
+    const start = _currentCount;
+    const diff = target - start;
+    if (diff === 0) return;
+
+    if (_animFrame) cancelAnimationFrame(_animFrame);
+
+    const duration = 600;
+    const startTime = performance.now();
+
+    function step(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // easeOutCubic
+      const ease = 1 - Math.pow(1 - progress, 3);
+      const val = Math.round(start + diff * ease);
+      updateText(val);
+
+      if (progress < 1) {
+        _animFrame = requestAnimationFrame(step);
+      } else {
+        _currentCount = target;
+        updateText(target);
+        _animFrame = null;
+      }
+    }
+
+    _animFrame = requestAnimationFrame(step);
+  }
+
+  let retryDelay = 1000;
+  let esInstance = null;
+
+  function sendHeartbeat() {
+    fetch(`${PROXY}/api/online/ping`)
+      .then(r => r.json())
+      .then(d => {
+        if (typeof d?.count === 'number') animateCount(d.count);
+      })
+      .catch(() => {});
+  }
+
+  function connectSSE() {
+    if (esInstance) {
+      try { esInstance.close(); } catch (e) {}
+    }
+
+    const url = `${PROXY}/api/online/stream`;
+    esInstance = new EventSource(url);
+
+    esInstance.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (typeof data.count === 'number') {
+          animateCount(data.count);
+          retryDelay = 1000;
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    esInstance.onerror = () => {
+      try { esInstance.close(); } catch (e) {}
+      esInstance = null;
+      setTimeout(connectSSE, retryDelay);
+      retryDelay = Math.min(retryDelay * 2, 30000);
+    };
+  }
+
+  function pollFallback() {
+    sendHeartbeat();
+    setInterval(sendHeartbeat, 25000);
+  }
+
+  // Heartbeat ping every 45s to maintain active status
+  sendHeartbeat();
+  setInterval(sendHeartbeat, 45000);
+
+  if (typeof EventSource !== 'undefined') {
+    connectSSE();
+  } else {
+    pollFallback();
+  }
+
+  // When tab becomes active again, immediately refresh count
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      sendHeartbeat();
+    }
+  });
+})();

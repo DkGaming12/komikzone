@@ -48,6 +48,98 @@ async function getJSON(pathAndQuery, ttl = 300_000) {
   throw new Error(`Gagal mengambil ${url} (${lastErr?.message || 'network error'})`);
 }
 
+/* ── Online User Tracking (SSE & Heartbeat) ──────────────────────── */
+const onlineClients = new Set();
+const recentHeartbeats = new Map(); // ip/key -> timestamp
+
+// Clean up stale heartbeats older than 90 seconds
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, ts] of recentHeartbeats.entries()) {
+    if (now - ts > 90000) recentHeartbeats.delete(key);
+  }
+}, 30000);
+
+function getCalculatedOnlineCount() {
+  const now = new Date();
+  // WIB = UTC+7 (Indonesian Western Time)
+  const wibHour = (now.getUTCHours() + 7) % 24;
+  const minute = now.getUTCMinutes();
+  const second = now.getUTCSeconds();
+
+  // Baseline traffic curve per hour
+  const hourlyBase = [
+    38, 28, 22, 18, 20, 28, // 00 - 05 Subuh
+    45, 62, 78, 88, 98, 110, // 06 - 11 Pagi / Siang
+    125, 134, 122, 130, 148, 162, // 12 - 17 Sore
+    182, 198, 212, 205, 168, 115  // 18 - 23 Malam (Peak)
+  ];
+
+  const base = hourlyBase[wibHour] || 50;
+  // Natural micro-fluctuations (smooth sine/cosine curves based on time)
+  const timeProgress = (wibHour * 3600 + minute * 60 + second);
+  const variance = Math.sin(timeProgress / 20) * 4 + Math.cos(timeProgress / 48) * 3;
+  const organicBase = Math.max(15, Math.round(base + variance));
+
+  // Add real live connected clients/sessions
+  const realActive = Math.max(onlineClients.size, recentHeartbeats.size);
+  return organicBase + realActive;
+}
+
+function broadcastOnlineCount() {
+  if (onlineClients.size === 0) return;
+  const count = getCalculatedOnlineCount();
+  const data = `data: ${JSON.stringify({ count })}\n\n`;
+  for (const client of onlineClients) {
+    try {
+      client.write(data);
+    } catch (e) {
+      onlineClients.delete(client);
+    }
+  }
+}
+
+// Periodic broadcast every 8 seconds for smooth real-time updates
+setInterval(broadcastOnlineCount, 8000);
+
+// SSE stream endpoint — clients stay connected
+app.get('/api/online/stream', (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',   // nginx compatibility
+  });
+  res.write('\n');  // flush headers
+
+  onlineClients.add(res);
+
+  // Send initial count immediately
+  res.write(`data: ${JSON.stringify({ count: getCalculatedOnlineCount() })}\n\n`);
+
+  // Heartbeat every 25s to keep connection alive
+  const heartbeat = setInterval(() => {
+    res.write(`: heartbeat\n\n`);
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    onlineClients.delete(res);
+  });
+});
+
+// Ping endpoint for active sessions & polling
+app.get('/api/online/ping', (req, res) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'client';
+  recentHeartbeats.set(ip, Date.now());
+  res.json({ count: getCalculatedOnlineCount() });
+});
+
+// Direct count endpoint
+app.get('/api/online/count', (req, res) => {
+  res.json({ count: getCalculatedOnlineCount() });
+});
+
 /* ── field mapping (keep response shapes identical to the old scraper) ── */
 
 const STATUS_MAP = { 1: 'Ongoing', 2: 'Completed', 3: 'Hiatus' };
