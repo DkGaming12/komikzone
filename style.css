@@ -2672,14 +2672,16 @@ body::before {
   position: absolute;
   top: 12px;
   right: 12px;
-  background: none;
-  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
   color: var(--txt3);
-  font-size: 1.2rem;
+  font-size: 0.8rem;
+  font-weight: 500;
   cursor: pointer;
-  padding: 5px;
+  padding: 4px 10px;
   line-height: 1;
-  transition: color var(--t);
+  transition: all var(--t);
 }
 
 .popup-close:hover {

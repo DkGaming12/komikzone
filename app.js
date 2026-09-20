@@ -1317,15 +1317,29 @@ $('btt').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'sm
 ───────────────────────────────────────────────────── */
 function showTrakteerPopup() {
   const popup = $('trakteer-popup');
-  if (popup) popup.classList.add('show');
+  if (popup) {
+    popup.classList.add('show');
+    let timeLeft = 5;
+    const closeBtn = $('popup-close');
+    if (closeBtn) closeBtn.textContent = `Tutup (${timeLeft})`;
+    
+    const timer = setInterval(() => {
+      timeLeft--;
+      if (closeBtn) closeBtn.textContent = `Tutup (${timeLeft})`;
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        popup.classList.remove('show');
+      }
+    }, 1000);
+    
+    popup.dataset.timer = timer;
+  }
 }
 
 function initPopup() {
   const popup = $('trakteer-popup');
   if (!popup) return;
 
-  // Muncul maksimal 1x per 24 jam — overlay full-screen memblokir semua
-  // klik (termasuk filter), jadi jangan dimunculkan di setiap load.
   const KEY = 'kz_popup_last';
   const DAY = 24 * 60 * 60 * 1000;
   let last = 0;
@@ -1337,7 +1351,13 @@ function initPopup() {
     try { localStorage.setItem(KEY, String(Date.now())); } catch {}
   }, 3000);
 
-  const hide = () => popup.classList.remove('show');
+  const hide = () => {
+    popup.classList.remove('show');
+    if (popup.dataset.timer) {
+      clearInterval(popup.dataset.timer);
+      delete popup.dataset.timer;
+    }
+  };
   $('popup-close')?.addEventListener('click', hide);
   $('popup-btn')?.addEventListener('click', hide);
   popup.addEventListener('click', e => { if (e.target === popup) hide(); });
