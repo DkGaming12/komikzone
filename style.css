@@ -12,6 +12,23 @@
   padding: 0;
 }
 
+/* Security: Disable global text selection & image dragging */
+body.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+img.no-drag,
+a.no-drag,
+.no-drag img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+}
+
 :root {
   /* Surfaces — cool obsidian, not flat gray */
   --bg: #0a0a12;

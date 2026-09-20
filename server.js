@@ -8,8 +8,30 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Trust Vercel's reverse proxy for correct IP detection in rate limiting
+app.set('trust proxy', 1);
+
+// Security Headers (Anti-Cloning & XSS)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://www.googletagmanager.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "https://assets.shngm.id", "https://api.shngm.io", "https://*.shinigami.asia"],
+      connectSrc: ["'self'", "https://api.shngm.io"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      frameAncestors: ["'none'"], // Prevent iframe cloning
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
 
 app.use(cors());
 app.use(express.static(path.join(__dirname)));
@@ -207,6 +229,26 @@ function fetchChapters(mangaId) {
   ).then(r => (r.data || []).map(mapChapter)).catch(() => []);
 }
 
+// Global Rate Limiter for all APIs (150 requests per 10 minutes)
+const globalLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 150,
+  message: { error: 'Terlalu banyak permintaan. Silakan tunggu beberapa saat.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Strict Rate Limiter for search to prevent database scraping (30 requests per minute)
+const searchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'Terlalu banyak permintaan pencarian. Harap jeda sejenak.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/', globalLimiter);
+
 /* ── /api/home ───────────────────────────────────────── */
 app.get('/api/home', async (req, res) => {
   try {
@@ -326,7 +368,7 @@ app.get('/api/list', async (req, res) => {
 });
 
 /* ── /api/search ─────────────────────────────────────── */
-app.get('/api/search', async (req, res) => {
+app.get('/api/search', searchLimiter, async (req, res) => {
   try {
     const { q = '' } = req.query;
     if (!q) return res.json({ items: [] });

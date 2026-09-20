@@ -1564,3 +1564,41 @@ window.addEventListener('appinstalled', () => {
     }
   });
 })();
+
+/* =====================================================
+   Security & Anti-Cloning
+   ===================================================== */
+(function initSecurity() {
+  // Disable Right-Click Context Menu
+  document.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+  });
+
+  // Prevent Image drag-and-drop
+  document.addEventListener('dragstart', (e) => {
+    if (e.target.nodeName === 'IMG' || e.target.nodeName === 'A') {
+      e.preventDefault();
+    }
+  });
+
+  // Disable DevTools Keyboard Shortcuts
+  document.addEventListener('keydown', (e) => {
+    // F12
+    if (e.key === 'F12') {
+      e.preventDefault();
+    }
+    
+    // Ctrl+Shift+I / Cmd+Option+I (Inspect)
+    // Ctrl+Shift+J / Cmd+Option+J (Console)
+    // Ctrl+Shift+C / Cmd+Option+C (Element select)
+    // Ctrl+U / Cmd+U (View source)
+    if (e.ctrlKey || e.metaKey) {
+      if (e.shiftKey && ['I', 'J', 'C', 'i', 'j', 'c'].includes(e.key)) {
+        e.preventDefault();
+      }
+      if (['U', 'u', 'S', 's'].includes(e.key)) {
+        e.preventDefault();
+      }
+    }
+  });
+})();
