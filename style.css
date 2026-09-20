@@ -3322,9 +3322,9 @@ body::before {
 
   /* Reader */
   .reader-bar {
-    padding: 0 .5rem;
-    gap: 4px;
-    height: 46px;
+    padding: 8px .5rem;
+    gap: 8px;
+    height: auto;
   }
 
   .r-title {
@@ -3409,14 +3409,17 @@ body::before {
   top: 0;
   z-index: 200;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
   align-items: center;
   gap: 12px;
   background: rgba(7, 7, 11, .92);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   border-bottom: 1px solid var(--border);
-  padding: 0 1.25rem;
-  height: 54px;
+  padding: 10px 1.25rem;
+  height: auto;
+  min-height: 54px;
 }
 
 .r-back {
@@ -3441,7 +3444,8 @@ body::before {
 }
 
 .r-title {
-  flex: 1;
+  width: 100%;
+  order: -1;
   font-size: .82rem;
   font-weight: 600;
   color: var(--txt);
@@ -3449,6 +3453,7 @@ body::before {
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: center;
+  margin-bottom: 2px;
 }
 
 .r-controls {
@@ -3777,8 +3782,8 @@ body::before {
 
 @media (max-width: 600px) {
   .reader-bar {
-    padding: 0 .6rem;
-    gap: 5px;
+    padding: 8px .6rem;
+    gap: 8px;
   }
 
   .r-title {
