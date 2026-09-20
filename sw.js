@@ -30,35 +30,37 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Only handle GET requests for our origin
   if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) return;
 
-  event.respondWith(
-    caches.match(event.request).then(response => {
-      // Return cached response if found
-      if (response) {
-        // Also fetch from network in background to update cache
-        fetch(event.request).then(res => {
-          if (res && res.status === 200) {
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, res));
-          }
-        }).catch(() => {});
-        return response;
-      }
-      
-      // If not in cache, fetch from network
-      return fetch(event.request).then(res => {
-        if (!res || res.status !== 200 || res.type !== 'basic') {
-          return res;
-        }
-        const responseToCache = res.clone();
+  // For HTML requests, use Network First strategy
+  if (event.request.mode === 'navigate' || event.request.headers.get('accept').includes('text/html')) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        const responseToCache = response.clone();
         caches.open(CACHE_NAME).then(cache => {
           cache.put(event.request, responseToCache);
         });
-        return res;
+        return response;
       }).catch(() => {
-        // Fallback for offline mode if needed
-      });
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
+
+  // For other requests (assets), use Stale-While-Revalidate
+  event.respondWith(
+    caches.match(event.request).then(response => {
+      const fetchPromise = fetch(event.request).then(networkResponse => {
+        if (networkResponse && networkResponse.status === 200) {
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, networkResponse.clone());
+          });
+        }
+        return networkResponse;
+      }).catch(() => {});
+      
+      return response || fetchPromise;
     })
   );
 });

@@ -1403,7 +1403,7 @@ const isIos = () => {
 const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
 
 const showPwaPrompt = () => {
-  if (pwaPrompt && !localStorage.getItem('kz_pwa_dismissed')) {
+  if (pwaPrompt) {
     setTimeout(() => {
       pwaPrompt.classList.add('show');
     }, 2000);
@@ -1420,6 +1420,13 @@ window.addEventListener('beforeinstallprompt', (e) => {
 if (isIos() && !isInStandaloneMode()) {
   showPwaPrompt();
 }
+
+// Fallback: show prompt anyway after 3 seconds if not triggered
+setTimeout(() => {
+  if (!pwaPrompt.classList.contains('show') && !isInStandaloneMode()) {
+    showPwaPrompt();
+  }
+}, 3000);
 
 if (btnInstall) {
   btnInstall.addEventListener('click', () => {
@@ -1444,7 +1451,13 @@ if (btnInstall) {
         deferredPrompt = null;
       }).catch(err => console.log('PWA error', err));
     } else {
-      pwaPrompt.classList.remove('show');
+      // If prompt shown but beforeinstallprompt didn't fire
+      const textDiv = pwaPrompt.querySelector('.pwa-text');
+      if (textDiv) {
+        textDiv.innerHTML = '<h4>Install Manual</h4><p>Buka menu Chrome (titik tiga ⋮ di pojok) lalu pilih <b>Install App</b> atau <b>Tambahkan ke Layar Utama</b>.</p>';
+      }
+      btnInstall.style.display = 'none';
+      btnCancel.textContent = 'Tutup';
     }
   });
 }
