@@ -80,7 +80,8 @@ const PAGE_PATHS = {
   explore: { path: '/explore', title: 'Explore Komik' },
   top: { path: '/top', title: 'Top Komik' },
   allseries: { path: '/all-series', title: 'All Series' },
-  genre: { path: '/genre', title: 'Genre Komik' }
+  genre: { path: '/genre', title: 'Genre Komik' },
+  library: { path: '/bookmark', title: 'Library Favorit' }
 };
 const DEFAULT_TITLE = document.title;
 let _navPushed = false;
@@ -120,6 +121,7 @@ function routeFromPath() {
   if (p === '/top') return navigate('top');
   if (p === '/all-series') return navigate('allseries');
   if (p === '/genre') return navigate('genre');
+  if (p === '/bookmark') return navigate('library');
   let m;
   if ((m = p.match(/^\/genre\/([^/]+)$/))) return loadGenre(m[1], m[1].replace(/-/g, ' '), 1);
   if ((m = p.match(/^\/manga\/([^/]+)$/))) return openDetail(m[1]);
@@ -686,6 +688,39 @@ $('history-row')?.addEventListener('click', e => {
   const c = e.target.closest('.hist-card');
   if (c?.dataset.ch) openReader(c.dataset.ch, '');
 });
+
+function renderLibrary() {
+  const grid = $('library-grid');
+  if (!grid) return;
+  const list = (function() { try { return JSON.parse(localStorage.getItem('kz_bookmarks')) || []; } catch { return []; } })();
+  
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty-box" style="grid-column: 1 / -1; padding: 4rem 1rem;">
+      <div class="ei">🔖</div>
+      <div class="et">Library Kosong</div>
+      <div class="es">Anda belum menyimpan komik apa pun. Klik "Simpan Favorit" pada komik untuk membacanya nanti.</div>
+    </div>`;
+    return;
+  }
+  
+  grid.innerHTML = list.map(m => `
+    <div class="komik-card" data-slug="${esc(m.slug)}">
+      <div class="kc-thumb">
+        <img class="kc-img" src="${esc(m.img || '')}" loading="lazy" onerror="this.onerror=null;this.parentElement.classList.add('noimg');this.remove()">
+        ${m.type ? `<div class="kc-type t-${esc(m.type.toLowerCase())}">${esc(m.type)}</div>` : ''}
+        ${m.score ? `<div class="kc-score">★ ${esc(m.score)}</div>` : ''}
+      </div>
+      <div class="kc-body">
+        <div class="kc-title">${esc(m.title)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+$('library-grid')?.addEventListener('click', e => {
+  const c = e.target.closest('.komik-card');
+  if (c?.dataset.slug) openDetail(c.dataset.slug);
+});
 $('clear-history')?.addEventListener('click', clearHistory);
 
 /* ─────────────────────────────────────────────────────
@@ -851,6 +886,7 @@ async function openDetail(slug) {
           <div class="d-btns">
             <button class="btn-primary" id="d-read-btn"></button>
             <button class="btn-ghost" id="d-latest-btn">Baca Chapter Terbaru</button>
+            <button class="btn-ghost" id="d-bm-btn" style="padding: 0 10px; font-size: 1.1rem;" title="Simpan ke Library">🔖</button>
           </div>
         </div>
       </div>
@@ -891,6 +927,31 @@ async function openDetail(slug) {
   // "Baca Chapter Awal". Tombol kedua selalu "Baca Chapter Terbaru".
   const readBtn = $('d-read-btn');
   const latestBtn = $('d-latest-btn');
+  const bmBtn = $('d-bm-btn');
+
+  // Logic for Bookmarks
+  const getBms = () => { try { return JSON.parse(localStorage.getItem('kz_bookmarks')) || []; } catch { return []; } };
+  const bms = getBms();
+  let isBm = bms.some(b => b.slug === slug);
+  bmBtn.textContent = isBm ? '✅ Tersimpan' : '🔖 Simpan Favorit';
+  if (isBm) bmBtn.classList.add('active-bm');
+
+  bmBtn.onclick = () => {
+    let list = getBms();
+    if (isBm) {
+      list = list.filter(b => b.slug !== slug);
+      bmBtn.textContent = '🔖 Simpan Favorit';
+      bmBtn.classList.remove('active-bm');
+      showToast('Dihapus dari Library', 2000);
+    } else {
+      list.unshift({ slug, title: d.title, img: d.img, score: d.score, type: d.type });
+      bmBtn.textContent = '✅ Tersimpan';
+      bmBtn.classList.add('active-bm');
+      showToast('Disimpan ke Library', 2000);
+    }
+    isBm = !isBm;
+    try { localStorage.setItem('kz_bookmarks', JSON.stringify(list)); } catch {}
+  };
   const chaptersArr = d.chapters || [];
   if (!chaptersArr.length) {
     readBtn.textContent = 'Tidak Ada Chapter';
@@ -1101,6 +1162,27 @@ async function openReader(chSlug, title) {
   // Slot iklan di bawah halaman terakhir
   pages.insertAdjacentHTML('beforeend', AD_SLOT_LB);
 
+  // Disqus Comments
+  pages.insertAdjacentHTML('beforeend', `<div id="disqus_thread" style="margin-top: 3rem; background: var(--bg-card); padding: 1rem; border-radius: 8px;"></div>`);
+  if (window.DISQUS) {
+    DISQUS.reset({
+      reload: true,
+      config: function () {
+        this.page.identifier = chSlug;
+        this.page.url = window.location.href;
+      }
+    });
+  } else {
+    window.disqus_config = function () {
+      this.page.identifier = chSlug;
+      this.page.url = window.location.href;
+    };
+    const s = document.createElement('script');
+    s.src = 'https://komikzone-demo.disqus.com/embed.js';
+    s.setAttribute('data-timestamp', +new Date());
+    (document.head || document.body).appendChild(s);
+  }
+
   // Placeholder while each image loads; swap to error msg on failure
   let loaded = 0;
   pages.querySelectorAll('.r-page img').forEach(img => {
@@ -1281,6 +1363,7 @@ function navigate(name) {
   if (name === 'top' && !$('top-grid').children.length) loadTop(1);
   if (name === 'allseries' && !$('all-grid').children.length) loadAllSeries(1);
   if (name === 'genre' && !$('genre-grid').children.length) buildGenreTiles();
+  if (name === 'library') renderLibrary();
 
   // URL + judul tab untuk halaman utama (detail/reader/genre diatur sendiri)
   if (PAGE_PATHS[name]) setUrl(PAGE_PATHS[name].path, PAGE_PATHS[name].title);

@@ -22,11 +22,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://www.googletagmanager.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      imgSrc: ["'self'", "data:", "https://assets.shngm.id", "https://api.shngm.io", "https://*.shinigami.asia"],
-      connectSrc: ["'self'", "https://api.shngm.io"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://www.googletagmanager.com", "https://*.disqus.com", "https://*.disquscdn.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.disquscdn.com"],
+      imgSrc: ["'self'", "data:", "https://assets.shngm.id", "https://api.shngm.io", "https://*.shinigami.asia", "https://*.disquscdn.com"],
+      connectSrc: ["'self'", "https://api.shngm.io", "https://*.disqus.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      frameSrc: ["https://disqus.com"],
       frameAncestors: ["'none'"], // Prevent iframe cloning
     },
   },
@@ -563,9 +564,67 @@ app.get('/sitemap.xml', async (req, res) => {
   }
 });
 
-/* ── SPA fallback: URL routing client-side (paritas dengan rute Vercel) ──
-   Path tanpa ekstensi file saja — /manga/style.css tetap ke static */
-app.get(/^\/(explore|top|all-series|genre|manga|chapter|p)(\/[^.]*)?$/, (req, res) => {
+const fs = require('fs');
+let _indexHtml = null;
+
+async function serveWithDynamicSEO(req, res, title, description, image) {
+  try {
+    if (!_indexHtml) {
+      _indexHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+    }
+    let html = _indexHtml;
+    if (title) {
+      html = html.replace(/<title>.*<\/title>/, `<title>${title} - KomikZone</title>`);
+      html = html.replace(/<meta property="og:title" content="[^"]*"/, `<meta property="og:title" content="${title}"`);
+      html = html.replace(/<meta name="twitter:title" content="[^"]*"/, `<meta name="twitter:title" content="${title}"`);
+    }
+    if (description) {
+      html = html.replace(/<meta name="description" content="[^"]*"/, `<meta name="description" content="${description}"`);
+      html = html.replace(/<meta property="og:description" content="[^"]*"/, `<meta property="og:description" content="${description}"`);
+      html = html.replace(/<meta name="twitter:description" content="[^"]*"/, `<meta name="twitter:description" content="${description}"`);
+    }
+    if (image) {
+      html = html.replace(/<meta property="og:image" content="[^"]*"/, `<meta property="og:image" content="${image}"`);
+      html = html.replace(/<meta name="twitter:image" content="[^"]*"/, `<meta name="twitter:image" content="${image}"`);
+    }
+    res.send(html);
+  } catch (e) {
+    res.sendFile(path.join(__dirname, 'index.html'));
+  }
+}
+
+/* ── SPA fallback with Dynamic SEO for sharing ── */
+app.get('/manga/:slug', async (req, res) => {
+  try {
+    const slug = req.params.slug;
+    const r = await getJSON(`/manga/detail/${slug}`, 300_000).catch(() => null);
+    if (r && r.data) {
+      const m = r.data;
+      const title = m.title ? m.title.replace(/"/g, '&quot;') : '';
+      const desc = m.description ? m.description.substring(0, 150).replace(/"/g, '&quot;') + '...' : '';
+      const img = m.cover_portrait_url || m.cover_image_url || '';
+      return serveWithDynamicSEO(req, res, `Baca ${title}`, desc, img);
+    }
+  } catch(e) {}
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/chapter/:slug', async (req, res) => {
+  try {
+    const slug = req.params.slug;
+    const r = await getJSON(`/chapter/detail/${slug}`, 300_000).catch(() => null);
+    if (r && r.data && r.data.chapter) {
+      const d = r.data;
+      // We don't have manga title immediately unless we fetch manga detail, 
+      // but we can just use Chapter Number.
+      return serveWithDynamicSEO(req, res, `Chapter ${d.chapter_number} - KomikZone`, `Baca Chapter ${d.chapter_number} Bahasa Indonesia`, '');
+    }
+  } catch(e) {}
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+/* ── Normal SPA fallback for other routes ── */
+app.get(/^\/(explore|top|all-series|genre|bookmark|p)(\/[^.]*)?$/, (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 

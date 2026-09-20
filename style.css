@@ -850,6 +850,34 @@ body::before {
   border-color: rgba(255, 255, 255, .25);
 }
 
+/* Bookmark button active state */
+.btn-ghost.active-bm {
+  background: linear-gradient(135deg, rgba(168, 85, 247, .25), rgba(236, 72, 153, .2));
+  border-color: var(--acc);
+  color: var(--acc);
+  box-shadow: 0 0 12px rgba(168, 85, 247, .15);
+}
+.btn-ghost.active-bm:hover {
+  background: linear-gradient(135deg, rgba(168, 85, 247, .35), rgba(236, 72, 153, .3));
+}
+
+/* Library page empty state */
+#pg-library .empty-box {
+  text-align: center;
+}
+#pg-library .empty-box .ei { font-size: 3rem; margin-bottom: .75rem; }
+#pg-library .empty-box .et { font-size: 1.2rem; font-weight: 700; margin-bottom: .5rem; color: var(--txt); }
+#pg-library .empty-box .es { color: var(--txt2); font-size: .9rem; max-width: 400px; margin: 0 auto; }
+
+/* Disqus thread in reader */
+#disqus_thread {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: var(--bg-card);
+  border-radius: var(--r);
+  border: 1px solid var(--bdr);
+}
+
 /* Slider controls */
 .feat-arrow {
   position: absolute;
