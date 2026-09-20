@@ -1378,3 +1378,53 @@ function initPopup() {
     showToast('Gagal memuat data. Coba refresh halaman.');
   }
 })();
+
+/* =====================================================
+   PWA & INSTALL PROMPT LOGIC
+   ===================================================== */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => {
+      console.log('SW registration failed: ', err);
+    });
+  });
+}
+
+let deferredPrompt;
+const pwaPrompt = document.getElementById('pwa-prompt');
+const btnInstall = document.getElementById('pwa-install');
+const btnCancel = document.getElementById('pwa-cancel');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Prevent Chrome 67 and earlier from automatically showing the prompt
+  e.preventDefault();
+  // Stash the event so it can be triggered later.
+  deferredPrompt = e;
+  
+  // Show our custom UI if not dismissed recently
+  if (pwaPrompt && !localStorage.getItem('kz_pwa_dismissed')) {
+    // delay showing prompt slightly
+    setTimeout(() => {
+      pwaPrompt.classList.add('show');
+    }, 2000);
+  }
+});
+
+if (btnInstall) {
+  btnInstall.addEventListener('click', async () => {
+    pwaPrompt.classList.remove('show');
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User response to the install prompt: ${outcome}`);
+      deferredPrompt = null;
+    }
+  });
+}
+
+if (btnCancel) {
+  btnCancel.addEventListener('click', () => {
+    pwaPrompt.classList.remove('show');
+    localStorage.setItem('kz_pwa_dismissed', '1');
+  });
+}

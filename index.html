@@ -15,6 +15,7 @@
   <link rel="canonical" href="https://www.komikzone.web.id/" />
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="apple-touch-icon" href="/favicon.png" />
+  <link rel="manifest" href="/manifest.json" />
 
   <!-- Open Graph (tampilan saat link dibagikan) -->
   <meta property="og:type" content="website" />
@@ -512,6 +513,21 @@
       <a href="https://teer.id/komikzone" target="_blank" rel="noopener" class="popup-btn" id="popup-btn">
         Dukung via Trakteer
       </a>
+    </div>
+  </div>
+
+  <!-- PWA Install Prompt -->
+  <div class="pwa-prompt" id="pwa-prompt">
+    <div class="pwa-content">
+      <img src="/favicon.png" alt="Icon" class="pwa-icon">
+      <div class="pwa-text">
+        <h4>Install KomikZone</h4>
+        <p>Akses lebih cepat & tanpa browser!</p>
+      </div>
+    </div>
+    <div class="pwa-actions">
+      <button class="pwa-btn pwa-install" id="pwa-install">Install</button>
+      <button class="pwa-btn pwa-cancel" id="pwa-cancel">Nanti</button>
     </div>
   </div>
 
