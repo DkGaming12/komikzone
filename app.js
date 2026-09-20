@@ -1395,69 +1395,51 @@ const pwaPrompt = document.getElementById('pwa-prompt');
 const btnInstall = document.getElementById('pwa-install');
 const btnCancel = document.getElementById('pwa-cancel');
 
-// Detect iOS
-const isIos = () => {
-  const userAgent = window.navigator.userAgent.toLowerCase();
-  return /iphone|ipad|ipod/.test(userAgent);
-};
-const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+// Detect iOS Safari
+const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches
+  || ('standalone' in navigator && navigator.standalone);
 
-const showPwaPrompt = () => {
-  if (pwaPrompt) {
-    setTimeout(() => {
-      pwaPrompt.classList.add('show');
-    }, 2000);
-  }
-};
-
+// ── Android / Desktop Chrome ─────────────────────────────────
+// beforeinstallprompt fires when Chrome deems the app installable.
+// We prevent the default mini-infobar and show our own banner instead.
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  showPwaPrompt();
+
+  // Only show if not already installed and not dismissed
+  if (pwaPrompt && !isStandalone() && !sessionStorage.getItem('kz_pwa_dismissed')) {
+    setTimeout(() => pwaPrompt.classList.add('show'), 1500);
+  }
 });
 
-// Show prompt manually for iOS (since beforeinstallprompt is not supported)
-if (isIos() && !isInStandaloneMode()) {
-  showPwaPrompt();
+// ── iOS fallback (Safari doesn't fire beforeinstallprompt) ────
+if (isIos() && !isStandalone()) {
+  if (pwaPrompt && !sessionStorage.getItem('kz_pwa_dismissed')) {
+    setTimeout(() => pwaPrompt.classList.add('show'), 1500);
+  }
 }
 
-// Fallback: show prompt anyway after 3 seconds if not triggered
-setTimeout(() => {
-  if (!pwaPrompt.classList.contains('show') && !isInStandaloneMode()) {
-    showPwaPrompt();
-  }
-}, 3000);
-
 if (btnInstall) {
-  btnInstall.addEventListener('click', () => {
+  btnInstall.addEventListener('click', async () => {
     if (isIos()) {
-      // iOS Safari requires manual action via Share menu
+      // Show iOS instruction
       const textDiv = pwaPrompt.querySelector('.pwa-text');
       if (textDiv) {
-        textDiv.innerHTML = '<h4>Install di iOS</h4><p>Tekan tombol <b>Share</b> 📤 di menu bawah, lalu pilih <b>Add to Home Screen</b> ➕</p>';
+        textDiv.innerHTML = '<h4>Cara Install di iOS</h4><p>Tekan <b>Share</b> 📤 lalu pilih <b>"Add to Home Screen"</b> ➕</p>';
       }
       btnInstall.style.display = 'none';
       btnCancel.textContent = 'Tutup';
       return;
     }
 
-    // Android / Desktop Chrome
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-           pwaPrompt.classList.remove('show');
-        }
-        deferredPrompt = null;
-      }).catch(err => console.log('PWA error', err));
-    } else {
-      // If prompt shown but beforeinstallprompt didn't fire
-      const textDiv = pwaPrompt.querySelector('.pwa-text');
-      if (textDiv) {
-        textDiv.innerHTML = '<h4>Install Manual</h4><p>Buka menu Chrome (titik tiga ⋮ di pojok) lalu pilih <b>Install App</b> atau <b>Tambahkan ke Layar Utama</b>.</p>';
-      }
-      btnInstall.style.display = 'none';
-      btnCancel.textContent = 'Tutup';
+    // Android / Desktop: trigger native Chrome install dialog
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    if (outcome === 'accepted') {
+      pwaPrompt.classList.remove('show');
     }
   });
 }
@@ -1465,6 +1447,12 @@ if (btnInstall) {
 if (btnCancel) {
   btnCancel.addEventListener('click', () => {
     pwaPrompt.classList.remove('show');
-    localStorage.setItem('kz_pwa_dismissed', '1');
+    sessionStorage.setItem('kz_pwa_dismissed', '1');
   });
 }
+
+// Hide prompt if app is already installed
+window.addEventListener('appinstalled', () => {
+  if (pwaPrompt) pwaPrompt.classList.remove('show');
+  deferredPrompt = null;
+});
