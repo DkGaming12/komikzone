@@ -1151,9 +1151,9 @@ async function openReader(chSlug, title) {
     return;
   }
 
-  // Iklan sebelum halaman pertama: blok 7 banner (pola reading_page-1 Shinigami).
-  // Tidak ada iklan disisip di tengah chapter agar aluran baca tidak terganggu.
-  let pagesHtml = adBlock(7);
+  // Tidak ada iklan sebelum halaman pertama maupun di tengah chapter, agar
+  // aluran baca tidak terganggu. Iklan hanya ada sebelum kolom komentar.
+  let pagesHtml = '';
   imgs.forEach((src, i) => {
     pagesHtml += `<div class="r-page">
       <img src="${esc(src)}" alt="Halaman ${i + 1}" loading="${i < 3 ? 'eager' : 'lazy'}">
