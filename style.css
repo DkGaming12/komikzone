@@ -39,6 +39,9 @@ a.no-drag,
   --border: rgba(255, 255, 255, 0.06);
   --border2: rgba(255, 255, 255, 0.11);
 
+  /* Slot iklan — selaras Shinigami (#27272A) tapi masuk palet Obsidian */
+  --ad-bg: #1a1a29;
+
   /* Accents */
   --purple: #8b5cf6;
   --purple2: #a78bfa;
@@ -376,6 +379,7 @@ body::before {
   font-weight: 700;
   color: var(--yellow);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Nav actions */
@@ -1543,7 +1547,7 @@ body::before {
     gap: 6px;
   }
   .reko-slider {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
   }
   .reko-arrow {
@@ -1558,7 +1562,7 @@ body::before {
     gap: 4px;
   }
   .reko-slider {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 4px;
   }
   .reko-slider .komik-card {
@@ -1569,10 +1573,10 @@ body::before {
     border-radius: 6px 6px 0 0;
   }
   .reko-slider .kc-body {
-    padding: 4px 4px 5px;
+    padding: 7px 8px 8px;
   }
   .reko-slider .kc-title {
-    font-size: .62rem;
+    font-size: .72rem;
     line-height: 1.25;
     min-height: 2.5em;
     -webkit-line-clamp: 2;
@@ -1583,10 +1587,10 @@ body::before {
     display: none;
   }
   .reko-slider .kc-ch {
-    padding: 2px 3px;
+    padding: 3px 5px;
   }
   .reko-slider .kc-ch-num {
-    font-size: .55rem;
+    font-size: .62rem;
   }
   .reko-slider .kc-ch-word {
     display: none;
@@ -2679,25 +2683,42 @@ body::before {
   max-width: 58%;
 }
 
-/* ============ SLOT IKLAN ============ */
+/* ============ SLOT IKLAN — banner seragam 16:2 (pola Shinigami) ============
+   Satu format untuk semua slot: banner selebar kontainer dengan aspect-ratio
+   16/2 (proporsi leaderboard 728x90), permukaan gelap, gambar cover. Lebar
+   banner selalu sejajar dengan konten di sampingnya — itulah yang membuat
+   iklan terlihat rapi, bukan mengganggu. */
 .ad-slot {
-  margin: 1.25rem auto;
+  margin: .85rem auto;
   text-align: center;
 }
 
 .ad-box {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: .35rem;
   flex-wrap: wrap;
+  width: 100%;
+  max-width: 900px;
   margin: 0 auto;
-  background: rgba(255, 255, 255, .025);
-  border: 1px dashed var(--border2);
-  border-radius: var(--r2);
+  aspect-ratio: 16 / 2;
+  background: var(--ad-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
   color: var(--txt3);
   font-size: .78rem;
   letter-spacing: .02em;
+}
+
+/* Banner iklan riil memenuhi seluruh kotak */
+.ad-box img,
+.ad-box picture {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .ad-box a {
@@ -2705,54 +2726,64 @@ body::before {
   text-decoration: underline;
 }
 
-/* Leaderboard: 728x90 desktop, 320x50 mobile (standar iklan web manga) */
-.ad-728 {
-  width: 728px;
-  max-width: 100%;
-  height: 90px;
-}
-
-/* Medium rectangle: sidebar */
-.ad-300 {
-  width: 300px;
-  max-width: 100%;
-  height: 250px;
-}
-
-/* Slim: banner pendek untuk celah sidebar */
+/* Kelas lama (728/300/slim) kini alias ke kotak seragam, agar markup
+   yang sudah ada tidak perlu diubah satu per satu. */
+.ad-728,
+.ad-300,
 .ad-slim {
-  width: 300px;
-  max-width: 100%;
-  height: 100px;
-  font-size: .7rem;
+  width: 100%;
+  max-width: 900px;
+  height: auto;
+  aspect-ratio: 16 / 2;
 }
 
-/* Grid beberapa slot iklan sekaligus (2 kolom, jadi 1 col di mobile) */
-.ad-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 300px));
-  justify-content: center;
-  gap: .75rem;
+/* Blok beberapa banner berurutan, ditumpuk rapat — Shinigami menaruh
+   2–7 banner sejajar dalam satu blok di sela section. */
+.ad-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   max-width: 100%;
-  margin: 1.25rem auto;
+  margin: .85rem auto;
+}
+
+/* .ad-grid lama kini berperilaku sama dengan .ad-block */
+.ad-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 100%;
+  margin: .85rem auto;
 }
 
 .ad-grid .ad-box {
   width: 100%;
-  height: 250px;
+  height: auto;
+  aspect-ratio: 16 / 2;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+  /* Padding samping menyamai .home-blk (.85rem) supaya banner iklan
+     segaris lurus dengan card komik di sampingnya — kunci kesan rapih. */
+  .ad-slot,
+  .ad-block,
   .ad-grid {
-    grid-template-columns: minmax(0, 320px);
+    width: 100%;
+    margin: .65rem auto;
+    padding: 0 .85rem;
   }
-}
 
-@media (max-width: 758px) {
-  .ad-728 {
-    width: 320px;
-    height: 50px;
-    font-size: .68rem;
+  .ad-box {
+    border-radius: 8px;
+    line-height: 1.35;
+  }
+
+  /* Keep in-content ad gaps aligned with the reading column. */
+  .home-layout > .home-main > .ad-slot,
+  .home-layout .home-main > .ad-block,
+  .home-layout .home-main > .ad-grid {
+    margin-top: .85rem;
+    margin-bottom: .85rem;
   }
 }
 
@@ -3216,15 +3247,19 @@ body::before {
     gap: 9px;
   }
 
-  /* Card grids */
+  /* Card grids — 2 kolom eksplisit biar segaris dengan blok banner iklan.
+     Padding samping tidak perlu: induk .home-blk sudah memberi inset. */
   .card-grid {
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 9px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 
+  /* .wide berada di luar .home-blk (halaman explore/top/dll), jadi
+     butuh inset sendiri yang menyamai .home-blk */
   .card-grid.wide {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     padding: 0 .85rem;
+    gap: 12px;
   }
 
   .kc-title {
@@ -3360,16 +3395,16 @@ body::before {
     width: 15px;
   }
 
-  /* Cards - 3 per row on small mobile */
+  /* Cards - 2 per row on small mobile, tetap segaris dengan banner */
   .card-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 7px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 
   .card-grid.wide {
-    grid-template-columns: repeat(3, 1fr);
-    padding: 0 .7rem;
-    gap: 7px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0 .85rem;
+    gap: 12px;
   }
 
   .kc-body {
@@ -3488,6 +3523,10 @@ body::before {
 
   #q {
     font-size: .8rem;
+  }
+
+  .sd-row > div[style*="flex:1"] {
+    min-width: 0;
   }
 
   /* Notice bar */
@@ -3626,6 +3665,24 @@ body::before {
   .r-back {
     padding: 5px 10px;
     font-size: .7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-name,
+  .online-badge {
+    display: none;
+  }
+
+  .nav-search {
+    min-width: 0;
+  }
+
+  .search-drop {
+    position: fixed;
+    top: calc(var(--nav-h) - 3px);
+    left: .7rem;
+    right: .7rem;
   }
 }
 

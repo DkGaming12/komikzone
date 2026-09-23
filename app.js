@@ -367,7 +367,7 @@ $('feat-dots').addEventListener('click', e => {
 ───────────────────────────────────────────────────── */
 let _rekoAll = [];
 let _rekoOffset = 0;
-let _rekoPerPage = 4;
+let _rekoPerPage = window.matchMedia('(max-width: 768px)').matches ? 2 : 4;
 
 function renderRekoSlider() {
   const sl = $('reko-slider');
@@ -424,7 +424,7 @@ $$('#reko-blk .filt').forEach(btn => btn.addEventListener('click', () => {
 }));
 
 function updateRekoPerPage() {
-  _rekoPerPage = 4;
+  _rekoPerPage = window.matchMedia('(max-width: 768px)').matches ? 2 : 4;
 }
 
 let _resizeT;
@@ -892,7 +892,7 @@ async function openDetail(slug) {
       </div>
     </div>
 
-    ${AD_SLOT_LB}
+    ${adBlock(2)}
 
     <div class="d-body">
       <div>
@@ -912,7 +912,7 @@ async function openDetail(slug) {
     </div>
 
     <!-- Slot iklan -->
-    ${AD_SLOT_LB}
+    ${adBlock(1)}
 
     <!-- Chapter list -->
     <div class="ch-section" id="ch-section">
@@ -988,10 +988,12 @@ function dRow(l, v) {
   return `<div class="d-row"><span class="d-rl">${esc(l)}</span><span class="d-rv">${esc(v)}</span></div>`;
 }
 
-/* Slot iklan placeholder (728x90 desktop / 320x50 mobile) */
-const AD_SLOT_LB = `<div class="ad-slot">
-  <div class="ad-box ad-728">Slot iklan tersedia. <a href="mailto:dknimelol@gmail.com">Hubungi dknimelol@gmail.com</a></div>
-</div>`;
+/* Slot iklan placeholder — banner seragam 16:2 (pola Shinigami).
+   Blok berisi n banner: di reader Shinigami ada 7 banner sebelum
+   halaman pertama dan 2 banner sebelum kolom komentar. */
+const adBlock = (n = 1) => `<div class="ad-block">${Array(n).fill(
+  `<div class="ad-box ad-728">Slot iklan tersedia. <a href="mailto:dknimelol@gmail.com">Hubungi dknimelol@gmail.com</a></div>`
+).join('')}</div>`;
 
 // Build chapter list with range tabs (Ch 1–50, 51–100, etc.)
 // Server returns newest first, so we reverse to show Ch 1 at top
@@ -1149,18 +1151,18 @@ async function openReader(chSlug, title) {
     return;
   }
 
-  let pagesHtml = '';
+  // Iklan sebelum halaman pertama: blok 7 banner (pola reading_page-1 Shinigami).
+  // Tidak ada iklan disisip di tengah chapter agar aluran baca tidak terganggu.
+  let pagesHtml = adBlock(7);
   imgs.forEach((src, i) => {
     pagesHtml += `<div class="r-page">
       <img src="${esc(src)}" alt="Halaman ${i + 1}" loading="${i < 3 ? 'eager' : 'lazy'}">
     </div>`;
-    // Slot iklan sisipan tiap 12 halaman (jangan tepat di paling akhir)
-    if ((i + 1) % 12 === 0 && i < imgs.length - 2) pagesHtml += AD_SLOT_LB;
   });
   pages.innerHTML = pagesHtml;
 
-  // Slot iklan di bawah halaman terakhir
-  pages.insertAdjacentHTML('beforeend', AD_SLOT_LB);
+  // Iklan sebelum komentar: blok 2 banner (pola comment-1 Shinigami)
+  pages.insertAdjacentHTML('beforeend', adBlock(2));
 
   // Disqus Comments
   pages.insertAdjacentHTML('beforeend', `<div id="disqus_thread" style="margin-top: 3rem; background: var(--bg-card); padding: 1rem; border-radius: 8px;"></div>`);
