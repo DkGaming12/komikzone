@@ -1315,19 +1315,43 @@ async function doSearch(q) {
 const PAGE_CONTENT = {
   'disclaimer': {
     title: 'Disclaimer',
-    html: `<p>Semua komik di website ini hanya preview dari komik aslinya, mungkin terdapat banyak kesalahan bahasa, nama tokoh, dan alur cerita. Untuk versi aslinya, silahkan beli komiknya jika sudah tersedia di kotamu.</p><p>KomikZone meng-host semua file dan gambar di server sendiri untuk memberikan pengalaman membaca yang cepat dan stabil.</p>`
+    html: `<p>Selamat datang di KomikZone. Dengan mengakses dan menggunakan situs ini, Anda dianggap telah membaca, memahami, dan menyetujui seluruh ketentuan di bawah ini.</p>
+<p>Semua komik yang tersedia di KomikZone merupakan <b>preview atau cuplikan</b> dari karya aslinya. Karena proses penerjemahan dilakukan oleh tim sukarela, kemungkinan terdapat kesalahan tata bahasa, penulisan nama tokoh, dan penyimpangan alur cerita. Kami selalu berusaha meningkatkan kualitas terjemahan dari waktu ke waktu. Untuk menikmati versi asli dan terbaik, <b>silakan beli komik resminya</b> jika sudah tersedia di kota atau toko online favorit Anda.</p>
+<p>KomikZone <b>tidak menyimpan, tidak meng-host, dan tidak mengunggah</b> berkas komik ke server milik kami sendiri. Seluruh gambar dan isi chapter diambil dari sumber pihak ketiga di luar kendali kami. Kami hanya menyediakan tautan dan antarmuka pembaca agar pengalaman membaca lebih cepat dan nyaman.</p>
+<p>Semua merek dagang, logo, karakter, dan hak cipta yang muncul di situs ini adalah milik pemiliknya masing-masing. KomikZone tidak mengklaim kepemilikan atas karya tersebut.</p>
+<p>Jika Anda adalah pemilik hak cipta atau perwakilan resmi yang merasa konten tertentu melanggar hak Anda, silakan kirim permohonan <b>takedown</b> melalui email kami. Kami akan menindaklanjuti dan menghapus konten yang dimaksud secepat mungkin setelah verifikasi.</p>
+<p>KomikZone <b>tidak bertanggung jawab</b> atas segala kerugian, kesalahan, atau dampak yang timbul dari penggunaan situs ini, termasuk ketersediaan layanan yang sewaktu-waktu dapat berubah tanpa pemberitahuan terlebih dahulu.</p>`
   },
   'privacy': {
     title: 'Privacy Policy',
-    html: `<p>KomikZone sangat menghargai privasi Anda. Kami tidak mengumpulkan, menyimpan, atau membagikan data pribadi Anda.</p><p>Data riwayat seperti "Terakhir Dibaca" dan preferensi tampilan sepenuhnya disimpan secara lokal di perangkat Anda (Local Storage) dan tidak dikirimkan ke server kami.</p>`
+    html: `<p>Privasi Anda penting bagi kami. Kebijakan ini menjelaskan bagaimana KomikZone menangani data Anda saat mengunjungi dan menggunakan situs kami.</p>
+<p><b>Data yang tidak kami kumpulkan:</b> KomikZone tidak mewajibkan pendaftaran atau login. Kami tidak mengumpulkan nama, alamat, nomor telepon, atau data identitas pribadi lainnya.</p>
+<p><b>Data yang tersimpan di perangkat Anda:</b> Fitur seperti "Terakhir Dibaca", daftar Library Favorit, preferensi tampilan, dan riwayat chapter disimpan sepenuhnya di perangkat Anda menggunakan <i>Local Storage</i> browser. Data ini <b>tidak pernah dikirimkan ke server kami</b> dan akan hilang jika Anda menghapus data browser atau cache perangkat.</p>
+<p><b>Analitik dan iklan pihak ketiga:</b> Untuk mengembangkan dan memelihara layanan, kami menggunakan layanan analitik serta mitra periklanan pihak ketiga. Pihak-pihak ini dapat menggunakan cookie untuk menganalisis trafik dan menampilkan iklan yang relevan. Penggunaan cookie tersebut diatur oleh kebijakan privasi masing-masing penyedia.</p>
+<p><b>Komentar:</b> Kolom komentar pada halaman chapter ditenagai oleh penyedia komentar pihak ketiga. Jika Anda meninggalkan komentar, data yang Anda masukkan dikelola oleh penyedia tersebut sesuai kebijakannya sendiri.</p>
+<p><b>Perubahan kebijakan:</b> Kebijakan privasi ini dapat diperbarui sewaktu-waktu mengikuti perkembangan situs. Perubahan akan berlaku sejak dipublikasikan di halaman ini, jadi kami menyarankan Anda meninjau halaman ini secara berkala.</p>
+<p>Jika Anda memiliki pertanyaan terkait privasi, hubungi kami melalui email: <a href="mailto:dknimelol@gmail.com">dknimelol@gmail.com</a>.</p>`
   },
   'about': {
     title: 'About KomikZone',
-    html: `<p>KomikZone adalah platform baca komik online (Manga, Manhwa, Manhua) gratis yang dirancang dengan antarmuka yang modern, cepat, dan <b>bebas dari pop-up iklan yang mengganggu</b>.</p><p>Kami berdedikasi untuk memberikan pengalaman membaca komik terbaik bagi pembaca di Indonesia.</p>`
+    html: `<p><b>KomikZone</b> adalah platform baca komik online gratis yang menyediakan ribuan judul <b>Manga</b> (Jepang), <b>Manhwa</b> (Korea), dan <b>Manhua</b> (Tiongkok) dalam terjemahan bahasa Indonesia. Kami hadir untuk para pecinta komik tanpa harus repot mencari sumber bacaan yang aman dan nyaman.</p>
+<p>Dibangun dengan antarmuka modern dan ringan, KomikZone dirancang agar dapat diakses dengan cepat bahkan pada koneksi internet yang terbatas. Situs kami mendukung <b>PWA</b> sehingga dapat dipasang langsung di layar utama perangkat Anda layaknya aplikasi native, tanpa perlu membuka browser terlebih dahulu.</p>
+<p>Beberapa hal yang kami usung: pembaruan chapter setiap hari, katalog komik yang terus bertambah, halaman pembaca yang nyaman dengan mode lebar yang dapat disesuaikan, serta sistem bookmark untuk menyimpan komik favorit Anda.</p>
+<p>Kami berkomitmen menjaga pengalaman membaca tetap <b>bebas dari pop-up iklan yang berlebihan</b>. Kami percaya membaca komik seharusnya menyenangkan, bukan penuh gangguan.</p>
+<p>KomikZone dibuat dan dikelola oleh tim kecil yang bersemangat. Setiap masukan, laporan bug, dan dukungan dari Anda sangat berarti bagi kelangsungan situs ini. Mari bersama-sama memajukan komunitas pembaca komik di Indonesia!</p>`
   },
   'kontak': {
     title: 'Kontak Kami',
-    html: `<p>Jika Anda memiliki pertanyaan, laporan bug, saran, maupun permohonan takedown terkait hak cipta, jangan ragu untuk menghubungi kami melalui:</p><ul><li>Email: <a href="mailto:dknimelol@gmail.com">dknimelol@gmail.com</a></li></ul><p>Kami akan berusaha merespons dalam waktu 2x24 jam.</p>`
+    html: `<p>Kami selalu senang mendengar dari Anda. Jangan ragu menghubungi kami untuk pertanyaan, saran, maupun hal lainnya. Berikut beberapa keperluan yang biasa kami terima:</p>
+<ul>
+<li><b>Pertanyaan umum &amp; bantuan</b> — cara membaca, masalah pada situs, atau permintaan fitur baru.</li>
+<li><b>Laporan bug</b> — beri tahu kami jika ada halaman yang tidak muncul, gambar rusak, atau fitur yang error. Semakin detail penjelasannya, semakin cepat kami memperbaikinya.</li>
+<li><b>Permintaan komik</b> — usulkan judul manga, manhwa, atau manhua yang ingin Anda baca bahasa Indonesianya.</li>
+<li><b>Permohonan takedown hak cipta</b> — lampirkan bukti kepemilikan agar proses verifikasi berjalan cepat.</li>
+</ul>
+<p><b>Email:</b> <a href="mailto:dknimelol@gmail.com">dknimelol@gmail.com</a></p>
+<p>Tim kami akan berusaha merespons setiap pesan dalam waktu <b>2×24 jam</b> pada hari kerja. Untuk laporan bug, mohon sertakan judul komik, nama chapter, serta jenis perangkat dan browser yang Anda gunakan.</p>
+<p>Terima kasih telah menjadi bagian dari KomikZone. Dukungan Anda membuat situs ini terus berkembang. ☕</p>`
   }
 };
 
