@@ -4262,20 +4262,20 @@ body.in-reader .reader-floatnav.rfn-hidden {
 
 .rfn-btn {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 5px;
   background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.1);
-  border-radius: 36px;
+  border-radius: 20px;
   color: var(--txt2);
   cursor: pointer;
   font-family: inherit;
-  font-size: .58rem;
+  font-size: .65rem;
   font-weight: 700;
-  letter-spacing: .03em;
-  padding: 8px 14px;
+  letter-spacing: .02em;
+  padding: 6px 12px;
   transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.15s;
   white-space: nowrap;
   line-height: 1;
@@ -4295,6 +4295,11 @@ body.in-reader .reader-floatnav.rfn-hidden {
   opacity: 0.28;
   cursor: not-allowed;
   pointer-events: none;
+}
+
+.rfn-btn svg {
+  width: 15px;
+  height: 15px;
 }
 
 /* Home button accent */
@@ -4336,8 +4341,8 @@ body.in-reader .reader-floatnav.rfn-hidden {
     min-width: 230px;
   }
   .rfn-btn {
-    padding: 7px 12px;
-    font-size: .55rem;
+    padding: 5px 8px;
+    font-size: .6rem;
   }
 }
 
