@@ -22,12 +22,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://www.googletagmanager.com", "https://*.disqus.com", "https://*.disquscdn.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.disquscdn.com"],
-      imgSrc: ["'self'", "data:", "https://assets.shngm.id", "https://api.shngm.io", "https://*.shinigami.asia", "https://*.disquscdn.com"],
-      connectSrc: ["'self'", "https://api.shngm.io", "https://*.disqus.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://www.googletagmanager.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "https://assets.shngm.id", "https://api.shngm.io", "https://*.shinigami.asia"],
+      connectSrc: ["'self'", "https://api.shngm.io"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      frameSrc: ["https://disqus.com"],
+      frameSrc: ["'none'"],
       frameAncestors: ["'none'"], // Prevent iframe cloning
     },
   },

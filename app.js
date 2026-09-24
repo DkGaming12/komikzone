@@ -1164,26 +1164,7 @@ async function openReader(chSlug, title) {
   // Iklan sebelum komentar: blok 2 banner (pola comment-1 Shinigami)
   pages.insertAdjacentHTML('beforeend', adBlock(2));
 
-  // Disqus Comments
-  pages.insertAdjacentHTML('beforeend', `<div id="disqus_thread" style="margin-top: 3rem; background: var(--bg-card); padding: 1rem; border-radius: 8px;"></div>`);
-  if (window.DISQUS) {
-    DISQUS.reset({
-      reload: true,
-      config: function () {
-        this.page.identifier = chSlug;
-        this.page.url = window.location.href;
-      }
-    });
-  } else {
-    window.disqus_config = function () {
-      this.page.identifier = chSlug;
-      this.page.url = window.location.href;
-    };
-    const s = document.createElement('script');
-    s.src = 'https://komikzone.disqus.com/embed.js';
-    s.setAttribute('data-timestamp', +new Date());
-    (document.head || document.body).appendChild(s);
-  }
+
 
   // Placeholder while each image loads; swap to error msg on failure
   let loaded = 0;
