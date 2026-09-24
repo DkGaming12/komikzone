@@ -86,11 +86,11 @@ const PAGE_PATHS = {
 const DEFAULT_TITLE = document.title;
 let _navPushed = false;
 
-/** Update address bar + document.title.
+/** Update address bar + document.title + meta tags (SEO).
  *  Pindah "grup" halaman (mis. /manga → /chapter) = pushState;
  *  pindah item dalam grup yang sama (chapter 1 → chapter 2) = replaceState
  *  supaya history tidak penuh entri chapter. */
-function setUrl(path, title) {
+function setUrl(path, title, description, image) {
   try {
     const base = p => p.replace(/\/[^/]*$/, '');
     if (location.pathname !== path) {
@@ -98,7 +98,28 @@ function setUrl(path, title) {
       else { history.pushState({}, '', path); _navPushed = true; }
     }
   } catch { }
-  document.title = title ? `${title} – KomikZone` : DEFAULT_TITLE;
+  
+  const fullTitle = title ? `${title} – KomikZone` : DEFAULT_TITLE;
+  document.title = fullTitle;
+  
+  // Update Meta Tags untuk SEO dan Open Graph
+  const setMeta = (name, content) => {
+    if (!content) return;
+    let el = document.querySelector(`meta[name="${name}"]`) || document.querySelector(`meta[property="${name}"]`);
+    if (el) el.setAttribute('content', content);
+  };
+  
+  const defaultDesc = "Baca manga, manhwa, manhua terlengkap. Update chapter terbaru setiap hari gratis!";
+  const defaultImg = "https://www.komikzone.web.id/og-image.png";
+  
+  setMeta('description', description || defaultDesc);
+  setMeta('og:title', fullTitle);
+  setMeta('og:description', description || defaultDesc);
+  setMeta('og:url', window.location.href);
+  setMeta('og:image', image || defaultImg);
+  setMeta('twitter:title', fullTitle);
+  setMeta('twitter:description', description || defaultDesc);
+  setMeta('twitter:image', image || defaultImg);
 }
 
 /** Tombol "← Kembali": pakai history bila kita yang push, agar URL ikut mundur */
@@ -860,7 +881,8 @@ async function openDetail(slug) {
 
   const scCol = '#a855f7';
   const syn = d.synopsis || 'Sinopsis tidak tersedia.';
-  setUrl(`/manga/${slug}`, d.title);
+  const shortDesc = syn.length > 150 ? syn.substring(0, 147) + '...' : syn;
+  setUrl(`/manga/${slug}`, d.title, shortDesc, d.img);
 
   root.innerHTML = `
     <button class="detail-back" onclick="goBack()">← Kembali</button>
@@ -1121,8 +1143,10 @@ async function openReader(chSlug, title) {
   if (_rChIdx < 0) _rChIdx = 0;
 
   const ch = _curChapters[_rChIdx] || { slug: chSlug, title: 'Chapter' };
+  const fullTitle = `${title || _curTitle || ''} ${ch.title || ''}`.trim();
   $('r-title').textContent = `${title || _curTitle || ''} — ${ch.title || 'Chapter'}`;
-  document.title = `${title || _curTitle || ''} ${ch.title || ''}`.trim() + ' – KomikZone';
+  
+  setUrl(`/chapter/${chSlug}`, fullTitle, `Baca ${fullTitle} bahasa Indonesia gratis di KomikZone!`, _curImg);
 
   if (_curMangaSlug && ch.slug) {
     saveHistory(_curMangaSlug, _curTitle, _curImg, ch.slug, ch.title || 'Chapter');
