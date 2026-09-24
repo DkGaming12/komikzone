@@ -278,6 +278,32 @@ function renderCards(gridId, items, { emptyMsg = 'Tidak ada komik' } = {}) {
 const SKEL_CARD = `<div class="skel-card"><div class="skel-img"></div>
   <div class="kc-body"><div class="skel-line"></div><div class="skel-line s"></div></div></div>`;
 
+const SKEL_DETAIL = `<div class="d-skel" style="animation: shimmer 1.6s ease infinite; padding-top: 1rem; max-width: 960px; margin: 0 auto;">
+  <div style="display: flex; gap: 1.25rem; padding: 1.25rem;" class="d-skel-hero">
+    <div style="width: 150px; height: 215px; border-radius: var(--r); background: var(--bg3); flex-shrink: 0;" class="d-skel-cover"></div>
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;" class="d-skel-text">
+      <div class="skel-line" style="height:28px; width:80%; margin-bottom:16px"></div>
+      <div class="skel-line" style="width:40%; margin-bottom:10px"></div>
+      <div class="skel-line" style="width:60%"></div>
+      <div style="display: flex; gap: 10px; margin-top: 2rem;" class="d-skel-btns">
+        <div class="skel-line" style="height:42px; width:130px; border-radius:21px"></div>
+        <div class="skel-line" style="height:42px; width:150px; border-radius:21px"></div>
+      </div>
+    </div>
+  </div>
+  <div style="padding: 1.25rem;">
+    <div class="skel-line"></div>
+    <div class="skel-line"></div>
+    <div class="skel-line s"></div>
+    <div class="skel-line" style="margin-top:2rem; width:100%; height:200px; border-radius:var(--r)"></div>
+  </div>
+</div>`;
+
+const SKEL_READER = `<div style="padding:2rem 1rem; width:100%; max-width:750px; margin:0 auto; animation: shimmer 1.6s ease infinite;">
+  <div class="skel-line" style="height: 60vh; width: 100%; border-radius: var(--r2); margin-bottom:1rem;"></div>
+  <div class="skel-line" style="height: 60vh; width: 100%; border-radius: var(--r2);"></div>
+</div>`;
+
 function gridLoading(gridId, n = 8) {
   const g = $(gridId);
   if (g) g.innerHTML = SKEL_CARD.repeat(n);
@@ -866,7 +892,7 @@ async function openDetail(slug) {
   navigate('detail');
   setUrl(`/manga/${slug}`);
   const root = $('detail-root');
-  root.innerHTML = `<div class="detail-loading"><div class="spin"></div><p>Memuat detail komik…</p></div>`;
+  root.innerHTML = SKEL_DETAIL;
 
   const d = await api(`${PROXY}/api/manga/${encodeURIComponent(slug)}`);
   if (!d || !d.title) {
@@ -1124,7 +1150,7 @@ async function openReader(chSlug, title) {
   setUrl(`/chapter/${chSlug}`);
 
   const pages = $('reader-pages');
-  pages.innerHTML = `<div class="reader-loading"><div class="spin"></div><p>Memuat data chapter…</p></div>`;
+  pages.innerHTML = SKEL_READER;
 
   // If _curChapters is empty (opened from history/cards without visiting detail),
   // the chapter response carries the manga's chapter list + metadata — no guessing.
@@ -1157,7 +1183,7 @@ async function openReader(chSlug, title) {
   try { localStorage.setItem('kz_ch_read', _chReadCount.toString()); } catch { }
   if (_chReadCount % 15 === 0) showTrakteerPopup();
 
-  pages.innerHTML = `<div class="reader-loading"><div class="spin"></div><p>Memuat gambar chapter…</p></div>`;
+  pages.innerHTML = SKEL_READER;
 
   const d = chData || await api(`${PROXY}/api/chapter?slug=${encodeURIComponent(chSlug)}`);
   const imgs = d?.images || [];
