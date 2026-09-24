@@ -1207,11 +1207,20 @@ function updateReaderNav() {
   // Tampilkan nomor chapter sebenarnya, bukan posisi index
   // (daftar terbaru-dulu: chapter 1 ada di index terakhir)
   const num = (_curChapters[_rChIdx]?.title || '').match(/[\d.]+/);
-  $('r-ch-info').textContent = num ? `${num[0]} / ${n}` : `${_rChIdx + 1} / ${n}`;
+  const label = num ? `${num[0]} / ${n}` : `${_rChIdx + 1} / ${n}`;
+  $('r-ch-info').textContent = label;
   // Daftar chapter terbaru-dulu (idx 0 = chapter terbaru):
   // "Berikutnya" = nomor lebih tinggi = idx-1, "Sebelumnya" = idx+1
   $('r-next-ch').disabled = _rChIdx <= 0;
   $('r-prev-ch').disabled = _rChIdx >= n - 1;
+
+  // Sync floating nav
+  const rfnInfo = $('rfn-info');
+  const rfnNext = $('rfn-next');
+  const rfnPrev = $('rfn-prev');
+  if (rfnInfo) rfnInfo.textContent = label;
+  if (rfnNext) rfnNext.disabled = _rChIdx <= 0;
+  if (rfnPrev) rfnPrev.disabled = _rChIdx >= n - 1;
 }
 
 function goReaderChapter(delta) {
@@ -1246,6 +1255,77 @@ $('r-fit-toggle').addEventListener('click', () => {
   $('r-fit-toggle').classList.toggle('active', _rFitWide);
   $('r-fit-toggle').textContent = _rFitWide ? '⇔ Kompak' : '⇔ Lebar';
 });
+
+/* ─────────────────────────────────────────────────────
+   READER FLOATING NAV — auto-hide on scroll, tap to show
+───────────────────────────────────────────────────── */
+(function () {
+  const floatnav = $('reader-floatnav');
+  if (!floatnav) return;
+
+  let _rfnHideTimer = null;
+  let _rfnLastY = 0;
+  let _rfnHidden = false;
+
+  function rfnShow() {
+    clearTimeout(_rfnHideTimer);
+    floatnav.classList.remove('rfn-hidden');
+    _rfnHidden = false;
+    // Auto-hide lagi setelah 3 detik tanpa interaksi
+    _rfnHideTimer = setTimeout(rfnHide, 3000);
+  }
+
+  function rfnHide() {
+    clearTimeout(_rfnHideTimer);
+    floatnav.classList.add('rfn-hidden');
+    _rfnHidden = true;
+  }
+
+  // Sembunyikan saat scroll, tampilkan kembali saat scroll berhenti sebentar
+  window.addEventListener('scroll', () => {
+    if (curPg !== 'reader') return;
+    const y = window.scrollY;
+    const dy = y - _rfnLastY;
+    _rfnLastY = y;
+    // Langsung sembunyikan saat user mulai scroll ke bawah
+    if (dy > 4) {
+      clearTimeout(_rfnHideTimer);
+      if (!_rfnHidden) rfnHide();
+    } else if (dy < -4) {
+      // Scroll ke atas → tampilkan
+      rfnShow();
+    }
+  }, { passive: true });
+
+  // Tap / klik mana saja di layar (di luar floatnav) → tampilkan
+  document.addEventListener('click', e => {
+    if (curPg !== 'reader') return;
+    if (floatnav.contains(e.target)) return; // klik di floatnav sendiri, jangan reset
+    rfnShow();
+  }, true);
+
+  // Touch tap di layar → tampilkan
+  document.addEventListener('touchend', e => {
+    if (curPg !== 'reader') return;
+    if (floatnav.contains(e.target)) return;
+    rfnShow();
+  }, { passive: true });
+
+  // Hover di atas floatnav → tahan tampil
+  floatnav.addEventListener('mouseenter', () => clearTimeout(_rfnHideTimer));
+  floatnav.addEventListener('mouseleave', () => {
+    if (curPg === 'reader') _rfnHideTimer = setTimeout(rfnHide, 2000);
+  });
+
+  // Floating nav buttons
+  $('rfn-home')?.addEventListener('click', () => navigate('home'));
+  $('rfn-prev')?.addEventListener('click', () => { goReaderChapter(+1); rfnShow(); });
+  $('rfn-next')?.addEventListener('click', () => { goReaderChapter(-1); rfnShow(); });
+
+  // Expose show untuk dipanggil saat reader dibuka
+  window._rfnShow = rfnShow;
+  window._rfnHide = rfnHide;
+})();
 
 /* ─────────────────────────────────────────────────────
    SEARCH
@@ -1376,6 +1456,15 @@ function navigate(name) {
   if (bnav) bnav.style.display = reading ? 'none' : '';
   document.querySelector('.navbar').style.display = reading ? 'none' : '';
   $('main').style.paddingTop = reading ? '0' : '';
+
+  // Toggle floating nav visibility (body class drives CSS display)
+  document.body.classList.toggle('in-reader', reading);
+  if (reading) {
+    // Tampilkan floating nav saat masuk reader, lalu auto-hide setelah 3 detik
+    window._rfnShow?.();
+  } else {
+    window._rfnHide?.();
+  }
 
   $$('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === name));
   curPg = name;

@@ -4228,3 +4228,122 @@ body::before {
     display: none;
   }
 }
+
+/* ==================== READER FLOATING NAV ==================== */
+.reader-floatnav {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  z-index: 300;
+  display: none; /* shown only in reader via .reader-active on body */
+  align-items: center;
+  gap: 6px;
+  background: rgba(10, 10, 18, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 50px;
+  padding: 8px 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
+  opacity: 1;
+  user-select: none;
+  min-width: 260px;
+  justify-content: center;
+}
+
+/* Show only when reader page is active */
+body.in-reader .reader-floatnav {
+  display: flex;
+}
+
+/* Hidden state — slide down + fade */
+body.in-reader .reader-floatnav.rfn-hidden {
+  transform: translateX(-50%) translateY(calc(100% + 1.5rem));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rfn-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 36px;
+  color: var(--txt2);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: .58rem;
+  font-weight: 700;
+  letter-spacing: .03em;
+  padding: 8px 14px;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.15s;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.rfn-btn:hover {
+  background: rgba(124, 92, 255, .18);
+  border-color: rgba(139, 92, 246, .5);
+  color: var(--txt);
+}
+
+.rfn-btn:active {
+  transform: scale(0.93);
+}
+
+.rfn-btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Home button accent */
+.rfn-btn#rfn-home {
+  background: rgba(124, 92, 255, .12);
+  border-color: rgba(139, 92, 246, .3);
+  color: var(--purple2, #a78bfa);
+}
+.rfn-btn#rfn-home:hover {
+  background: rgba(124, 92, 255, .28);
+}
+
+/* Next chapter — accent gradient */
+.rfn-btn.rfn-next {
+  background: linear-gradient(135deg, rgba(124,92,255,.18), rgba(59,130,246,.12));
+  border-color: rgba(139, 92, 246, .35);
+  color: #c4b5fd;
+}
+.rfn-btn.rfn-next:hover {
+  background: linear-gradient(135deg, rgba(124,92,255,.35), rgba(59,130,246,.25));
+  color: #fff;
+}
+
+.rfn-info {
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--txt3);
+  text-align: center;
+  padding: 0 10px;
+  white-space: nowrap;
+  min-width: 42px;
+}
+
+@media (max-width: 480px) {
+  .reader-floatnav {
+    bottom: 1rem;
+    padding: 7px 10px;
+    gap: 4px;
+    min-width: 230px;
+  }
+  .rfn-btn {
+    padding: 7px 12px;
+    font-size: .55rem;
+  }
+}
