@@ -1449,7 +1449,7 @@ const PAGE_CONTENT = {
 <p>Dibangun dengan antarmuka modern dan ringan, KomikZone dirancang agar dapat diakses dengan cepat bahkan pada koneksi internet yang terbatas. Situs kami mendukung <b>PWA</b> sehingga dapat dipasang langsung di layar utama perangkat Anda layaknya aplikasi native, tanpa perlu membuka browser terlebih dahulu.</p>
 <p>Beberapa hal yang kami usung: pembaruan chapter setiap hari, katalog komik yang terus bertambah, halaman pembaca yang nyaman dengan mode lebar yang dapat disesuaikan, serta sistem bookmark untuk menyimpan komik favorit Anda.</p>
 <p>Kami berkomitmen menjaga pengalaman membaca tetap <b>bebas dari pop-up iklan yang berlebihan</b>. Kami percaya membaca komik seharusnya menyenangkan, bukan penuh gangguan.</p>
-<p>KomikZone dibuat dan dikelola oleh tim kecil yang bersemangat. Setiap masukan, laporan bug, dan dukungan dari Anda sangat berarti bagi kelangsungan situs ini. Mari bersama-sama memajukan komunitas pembaca komik di Indonesia!</p>`
+<p>KomikZone dibuat dan dikelola oleh <b>Didi Purnomo</b> — Mahasiswa Informatika, UIN K.H. Abdurrahman Wahid Pekalongan. Setiap masukan, laporan bug, dan dukungan dari Anda sangat berarti bagi kelangsungan situs ini. Mari bersama-sama memajukan komunitas pembaca komik di Indonesia!</p>`
   },
   'kontak': {
     title: 'Kontak Kami',
