@@ -1449,6 +1449,7 @@ function applyBrightness() {
 }
 $('r-settings')?.addEventListener('click', e => {
   e.stopPropagation();
+  $('chlist-pop')?.classList.add('hidden');
   $('reader-settings-pop')?.classList.toggle('hidden');
 });
 $('bright-slider')?.addEventListener('input', e => {
@@ -1476,6 +1477,52 @@ syncSaverToggle();
 document.addEventListener('click', e => {
   if (!e.target.closest('#reader-settings-pop') && !e.target.closest('#r-settings')) {
     $('reader-settings-pop')?.classList.add('hidden');
+  }
+});
+
+/* ─── Popup daftar chapter di reader ─── */
+function renderChListPop(filter = '') {
+  const wrap = $('chlist-items');
+  if (!wrap) return;
+  const q = filter.trim().toLowerCase();
+  const curSlug = _curChapters[_rChIdx]?.slug;
+  const items = _curChapters.filter(c => !q || (c.title || '').toLowerCase().includes(q));
+  wrap.innerHTML = items.map(c => `
+    <div class="chlist-item${c.slug === curSlug ? ' active' : ''}" data-ch="${esc(c.slug)}">
+      <span>${esc(c.title || 'Chapter')}${c.slug === curSlug ? ' 👈' : ''}</span>
+      <span class="chlist-date">${esc(c.date || '')}</span>
+    </div>`).join('') || `<div class="notif-empty">Tidak ketemu 😅</div>`;
+  // scroll ke chapter aktif
+  const act = wrap.querySelector('.chlist-item.active');
+  if (act && !q) act.scrollIntoView({ block: 'center' });
+}
+$('r-chlist')?.addEventListener('click', e => {
+  e.stopPropagation();
+  $('reader-settings-pop')?.classList.add('hidden');
+  const pop = $('chlist-pop');
+  const opening = pop?.classList.contains('hidden');
+  if (opening) {
+    const q = $('chlist-q');
+    if (q) q.value = '';
+    renderChListPop();
+  }
+  pop?.classList.toggle('hidden');
+});
+$('chlist-q')?.addEventListener('input', e => renderChListPop(e.target.value));
+$('chlist-items')?.addEventListener('click', e => {
+  const it = e.target.closest('.chlist-item');
+  if (!it?.dataset.ch) return;
+  $('chlist-pop')?.classList.add('hidden');
+  const idx = _curChapters.findIndex(c => c.slug === it.dataset.ch);
+  if (idx < 0 || idx === _rChIdx) return;
+  if (idx < _rChIdx) markChapterDone(); // maju = chapter ini selesai
+  _rChIdx = idx;
+  openReader(it.dataset.ch, _curTitle);
+});
+// tutup popup chapter saat klik di luar
+document.addEventListener('click', e => {
+  if (!e.target.closest('#chlist-pop') && !e.target.closest('#r-chlist')) {
+    $('chlist-pop')?.classList.add('hidden');
   }
 });
 

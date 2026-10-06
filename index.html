@@ -509,6 +509,7 @@
           <button class="r-btn" id="r-prev-ch" title="Chapter sebelumnya">‹ Ch</button>
           <span class="r-ch-info" id="r-ch-info"></span>
           <button class="r-btn" id="r-next-ch" title="Chapter berikutnya">Ch ›</button>
+          <button class="r-btn" id="r-chlist" title="Daftar semua chapter">📋</button>
           <button class="r-btn" id="r-settings" title="Pengaturan reader">⚙️</button>
         </div>
       </div>
@@ -538,6 +539,15 @@
           <button class="r-btn" id="rs-fit">⇔ Lebar</button>
           <button class="r-btn" id="rs-dl">⬇️ Download chapter</button>
         </div>
+      </div>
+
+      <!-- Popup daftar chapter -->
+      <div class="reader-settings chlist-pop hidden" id="chlist-pop">
+        <div class="rs-title">📋 Daftar Chapter</div>
+        <div class="chlist-search">
+          <input id="chlist-q" type="text" placeholder="🔍 Cari chapter..." autocomplete="off">
+        </div>
+        <div class="chlist-items" id="chlist-items"></div>
       </div>
 
       <!-- Floating chapter nav (auto-hide on scroll, tap to show) -->
