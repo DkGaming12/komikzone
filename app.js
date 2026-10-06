@@ -1360,7 +1360,7 @@ async function openReader(chSlug, title) {
   let pagesHtml = '';
   imgs.forEach((src, i) => {
     pagesHtml += `<div class="r-page">
-      <img src="${esc(src)}" alt="Halaman ${i + 1}" loading="${i < 3 ? 'eager' : 'lazy'}">
+      <img src="${esc(saverUrl(src))}" alt="Halaman ${i + 1}" loading="${i < 3 ? 'eager' : 'lazy'}">
     </div>`;
   });
   pages.innerHTML = pagesHtml;
@@ -1387,6 +1387,8 @@ async function openReader(chSlug, title) {
   });
 
   updateReaderNav();
+  updateAutoNextBtn();
+  setupAutoNext();
   if (_rAutoTimer) { clearTimeout(_rAutoTimer); _rAutoTimer = null; }
   _rMaxScroll = 0;
   window.scrollTo({ top: 0 });
@@ -1454,10 +1456,65 @@ $('bright-slider')?.addEventListener('input', e => {
   try { localStorage.setItem('kz_brightness', String(_brightness)); } catch {}
   applyBrightness();
 });
+
+/* ─── Mode hemat data: gambar dikompres via /api/img-low ─── */
+let _saver = localStorage.getItem('kz_saver') === '1';
+function saverUrl(src) {
+  if (!_saver || !src || src.startsWith('blob:') || src.startsWith('data:')) return src;
+  return `${PROXY}/api/img-low?url=${encodeURIComponent(src)}`;
+}
+function syncSaverToggle() {
+  const t = $('saver-toggle');
+  if (t) t.checked = _saver;
+}
+$('saver-toggle')?.addEventListener('change', e => {
+  _saver = e.target.checked;
+  try { localStorage.setItem('kz_saver', _saver ? '1' : '0'); } catch {}
+  showToast(_saver ? '📶 Mode hemat data AKTIF — gambar dimuat versi ringan' : '📶 Mode hemat data mati — kualitas penuh', 2200);
+});
+syncSaverToggle();
 document.addEventListener('click', e => {
   if (!e.target.closest('#bright-pop') && !e.target.closest('#r-bright')) {
     $('bright-pop')?.classList.add('hidden');
   }
+});
+
+/* ─── Auto-lanjut chapter berikutnya ─── */
+let _autoNext = localStorage.getItem('kz_autonext') === '1';
+let _autoNextTimer = null;
+let _autoNextObs = null;
+function updateAutoNextBtn() {
+  const b = $('r-autonext');
+  if (b) { b.classList.toggle('active', _autoNext); b.style.opacity = _autoNext ? '1' : '.45'; }
+}
+function setupAutoNext() {
+  if (_autoNextObs) { _autoNextObs.disconnect(); _autoNextObs = null; }
+  if (_autoNextTimer) { clearTimeout(_autoNextTimer); _autoNextTimer = null; }
+  if (!_autoNext) return;
+  if (_rChIdx <= 0) return; // sudah chapter terbaru, tidak ada berikutnya
+  const pages = document.querySelectorAll('#reader-pages .r-page');
+  const last = pages[pages.length - 1];
+  if (!last) return;
+  _autoNextObs = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting && !_autoNextTimer) {
+      _autoNextTimer = setTimeout(() => {
+        _autoNextTimer = null;
+        if (!_autoNext) return;
+        showToast('⏭️ Lanjut ke chapter berikutnya...', 1500);
+        goReaderChapter(-1);
+      }, 1500);
+    } else if (!entries[0].isIntersecting && _autoNextTimer) {
+      clearTimeout(_autoNextTimer); _autoNextTimer = null;
+    }
+  }, { threshold: 0.7 });
+  _autoNextObs.observe(last);
+}
+$('r-autonext')?.addEventListener('click', () => {
+  _autoNext = !_autoNext;
+  try { localStorage.setItem('kz_autonext', _autoNext ? '1' : '0'); } catch {}
+  updateAutoNextBtn();
+  setupAutoNext();
+  showToast(_autoNext ? '⏭️ Auto-lanjut AKTIF' : '⏭️ Auto-lanjut mati', 1800);
 });
 
 // Retry a single failed reader page
@@ -1902,7 +1959,8 @@ async function downloadChapter(manga, ch, btn) {
     const blobs = [];
     let done = 0, size = 0;
     const fetchOne = async (src) => {
-      const r = await fetch(`${PROXY}/api/img?url=${encodeURIComponent(src)}`, { signal: AbortSignal.timeout(60000) });
+      const ep = _saver ? 'img-low' : 'img';
+      const r = await fetch(`${PROXY}/api/${ep}?url=${encodeURIComponent(src)}`, { signal: AbortSignal.timeout(60000) });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const b = await r.blob();
       size += b.size; done++;

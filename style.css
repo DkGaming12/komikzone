@@ -4292,6 +4292,14 @@ body::before {
   cursor: pointer;
 }
 .bp-val { text-align: center; font-size: .78rem; color: var(--txt2, #aaa); margin-top: 6px; font-weight: 700; }
+.bp-toggle {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--border, rgba(255,255,255,.08));
+  font-size: .82rem; cursor: pointer; user-select: none;
+}
+.bp-toggle input { accent-color: #4ade80; width: 16px; height: 16px; cursor: pointer; }
+.bp-hint { font-size: .68rem; color: var(--txt3, #888); margin-top: 4px; text-align: center; }
 
 /* Progress baca di kartu library */
 .kc-prog {

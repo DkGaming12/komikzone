@@ -424,6 +424,42 @@ app.get('/api/img', async (req, res) => {
   }
 });
 
+/* ── /api/img-low: versi hemat data (kompres via sharp) ──────── */
+let _sharp = null;
+function getSharp() {
+  if (!_sharp) { try { _sharp = require('sharp'); } catch { _sharp = false; } }
+  return _sharp || null;
+}
+app.get('/api/img-low', async (req, res) => {
+  try {
+    const u = new URL(String(req.query.url || ''));
+    if (!IMG_HOSTS.has(u.hostname)) return res.status(400).json({ error: 'Host tidak diizinkan.' });
+    const sharp = getSharp();
+    const r = await fetch(u.toString(), {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36' },
+      signal: AbortSignal.timeout(30000)
+    });
+    if (!r.ok || !r.body) return res.status(502).json({ error: 'Gagal ambil gambar.' });
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (!sharp) { // fallback: kirim asli jika sharp tak tersedia
+      res.set('Content-Type', r.headers.get('content-type') || 'image/jpeg');
+      res.set('Cache-Control', 'public, max-age=86400');
+      return res.send(buf);
+    }
+    const out = await sharp(buf)
+      .resize({ width: 800, withoutEnlargement: true })
+      .jpeg({ quality: 60, progressive: true })
+      .toBuffer();
+    res.set('Content-Type', 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.set('X-Saver', '1');
+    res.send(out);
+  } catch (e) {
+    console.error('/api/img-low error:', e.message);
+    res.status(502).json({ error: 'Gagal kompres gambar.' });
+  }
+});
+
 /* ── /api/notif-check: cek chapter terbaru untuk daftar slug ────
    Query: ?slugs=slug1,slug2 (maks 30). Return: [{slug, chSlug, chTitle, date}] */
 app.get('/api/notif-check', async (req, res) => {
