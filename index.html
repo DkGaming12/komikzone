@@ -414,11 +414,22 @@
     <!-- LIBRARY (BOOKMARKS) -->
     <div id="pg-library" class="pg">
       <div class="pg-header">
-        <h1>🔖 Library Favorit</h1>
-        <p>Koleksi komik yang Anda simpan untuk dibaca nanti.</p>
+        <h1>🔖 Library</h1>
+        <p>Koleksi komik yang Anda simpan & download untuk dibaca offline.</p>
+      </div>
+      <div class="lib-tabs" id="lib-tabs">
+        <button class="lib-tab active" data-ltab="fav">🔖 Favorit</button>
+        <button class="lib-tab" data-ltab="offline">📥 Offline <span id="lib-off-count"></span></button>
       </div>
       <div class="card-grid wide" id="library-grid">
         <!-- Bookmark cards rendered here -->
+      </div>
+      <div id="offline-panel" class="hidden">
+        <div class="off-bar">
+          <span id="off-size">Menghitung...</span>
+          <button class="btn-danger-sm" id="off-clear-all">🗑 Hapus semua</button>
+        </div>
+        <div id="offline-list"></div>
       </div>
     </div>
 
@@ -485,6 +496,7 @@
         <div class="r-title" id="r-title">Memuat...</div>
         <div class="r-controls">
           <button class="r-btn" id="r-fit-toggle" title="Toggle lebar halaman">⇔ Lebar</button>
+          <button class="r-btn" id="r-dl" title="Download chapter ini untuk dibaca offline">⬇</button>
           <button class="r-btn" id="r-prev-ch" title="Chapter sebelumnya">‹ Ch</button>
           <span class="r-ch-info" id="r-ch-info"></span>
           <button class="r-btn" id="r-next-ch" title="Chapter berikutnya">Ch ›</button>

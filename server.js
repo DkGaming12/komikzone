@@ -402,6 +402,28 @@ app.get('/api/schedule', async (req, res) => {
 });
 
 
+
+/* ── /api/img: proxy gambar chapter (untuk download offline) ────
+   Hanya host CDN yang diizinkan. */
+const IMG_HOSTS = new Set(['assets.shngm.id']);
+app.get('/api/img', async (req, res) => {
+  try {
+    const u = new URL(String(req.query.url || ''));
+    if (!IMG_HOSTS.has(u.hostname)) return res.status(400).json({ error: 'Host tidak diizinkan.' });
+    const r = await fetch(u.toString(), {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36' },
+      signal: AbortSignal.timeout(30000)
+    });
+    if (!r.ok || !r.body) return res.status(502).json({ error: 'Gagal ambil gambar.' });
+    res.set('Content-Type', r.headers.get('content-type') || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(Buffer.from(await r.arrayBuffer()));
+  } catch (e) {
+    console.error('/api/img error:', e.message);
+    res.status(502).json({ error: 'Gagal ambil gambar.' });
+  }
+});
+
 /* ── /api/notif-check: cek chapter terbaru untuk daftar slug ────
    Query: ?slugs=slug1,slug2 (maks 30). Return: [{slug, chSlug, chTitle, date}] */
 app.get('/api/notif-check', async (req, res) => {

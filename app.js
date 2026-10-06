@@ -741,6 +741,7 @@ $('history-row')?.addEventListener('click', e => {
 function renderLibrary() {
   const grid = $('library-grid');
   if (!grid) return;
+  updateOffCount();
   const list = (function() { try { return JSON.parse(localStorage.getItem('kz_bookmarks')) || []; } catch { return []; } })();
   
   if (!list.length) {
@@ -996,7 +997,7 @@ async function openDetail(slug) {
     <div class="ch-section" id="ch-section">
       <h3><span>📚 Daftar Chapter</span></h3>
       <div class="ch-list" id="ch-list">
-        ${buildChapterList(d.chapters || [], slug)}
+        ${buildChapterList(d.chapters || [], { slug, title: d.title, img: d.img })}
       </div>
     </div>`;
 
@@ -1059,6 +1060,8 @@ async function openDetail(slug) {
   _curTitle = d.title;
   _curImg = d.img;
   _curMangaSlug = slug;
+  // tandai tombol download untuk chapter yg sudah tersimpan offline
+  markDownloadedButtons();
 }
 
 function dRow(l, v) {
@@ -1075,10 +1078,10 @@ const adBlock = (n = 1) => `<div class="ad-block">${Array(n).fill(
 
 // Build chapter list with range tabs (Ch 1–50, 51–100, etc.)
 // Server returns newest first, so we reverse to show Ch 1 at top
-function buildChapterList(chapters, mangaSlug) {
+function buildChapterList(chapters, manga) {
   if (!chapters.length) return `<div class="ch-empty">📭 Belum ada chapter tersedia.</div>`;
 
-  const key = (mangaSlug || '_cur').replace(/[^a-z0-9-]/gi, '');
+  const key = ((manga && manga.slug) || '_cur').replace(/[^a-z0-9-]/gi, '');
   const sorted = [...chapters].reverse(); // oldest → newest
 
   const renderItem = (c) => `
@@ -1086,6 +1089,7 @@ function buildChapterList(chapters, mangaSlug) {
       <span class="ch-num">${esc(c.title || 'Chapter')}</span>
       <span class="ch-title-txt"></span>
       <span class="ch-date">${esc(c.date || '')}</span>
+      <button class="ch-dl-btn" data-dl="${esc(c.slug)}" title="Download untuk dibaca offline">⬇️</button>
       <button class="ch-read-btn">📖 Baca</button>
     </div>`;
 
@@ -1201,7 +1205,6 @@ async function openReader(chSlug, title) {
   const ch = _curChapters[_rChIdx] || { slug: chSlug, title: 'Chapter' };
   const fullTitle = `${title || _curTitle || ''} ${ch.title || ''}`.trim();
   $('r-title').textContent = `${title || _curTitle || ''} — ${ch.title || 'Chapter'}`;
-  
   setUrl(`/chapter/${chSlug}`, fullTitle, `Baca ${fullTitle} bahasa Indonesia gratis di KomikZone!`, _curImg);
 
   if (_curMangaSlug && ch.slug) {
@@ -1216,7 +1219,14 @@ async function openReader(chSlug, title) {
   pages.innerHTML = SKEL_READER;
 
   const d = chData || await api(`${PROXY}/api/chapter?slug=${encodeURIComponent(chSlug)}`);
-  const imgs = d?.images || [];
+  let imgs = d?.images || [];
+
+  // Prioritaskan versi offline (IndexedDB) jika chapter ini sudah didownload
+  let isOffline = false;
+  try {
+    const offImgs = await getOfflineImages(chSlug);
+    if (offImgs) { imgs = offImgs; isOffline = true; }
+  } catch {}
 
   if (!imgs.length) {
     pages.innerHTML = `<div class="reader-error">
@@ -1240,6 +1250,10 @@ async function openReader(chSlug, title) {
     </div>`;
   });
   pages.innerHTML = pagesHtml;
+  if (isOffline) {
+    $('r-title').textContent += ' 📥';
+    $('r-title').title = 'Dibaca dari penyimpanan offline';
+  }
 
   // Iklan sebelum komentar: blok 2 banner (pola comment-1 Shinigami)
   pages.insertAdjacentHTML('beforeend', adBlock(2));
@@ -1296,6 +1310,15 @@ function goReaderChapter(delta) {
 $('r-back').addEventListener('click', () => { if (_navPushed) history.back(); else navigate('detail'); });
 $('r-prev-ch').addEventListener('click', () => goReaderChapter(+1));
 $('r-next-ch').addEventListener('click', () => goReaderChapter(-1));
+$('r-dl').addEventListener('click', () => {
+  const ch = _curChapters[_rChIdx];
+  if (!ch?.slug) { showToast('Chapter belum dimuat', 2000); return; }
+  downloadChapter(
+    { slug: _curMangaSlug, title: _curTitle, img: _curImg },
+    { slug: ch.slug, title: ch.title },
+    null
+  );
+});
 
 // Retry a single failed reader page
 $('reader-pages').addEventListener('click', e => {
@@ -1621,6 +1644,236 @@ function initPopup() {
   popup.addEventListener('click', e => { if (e.target === popup) hide(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
 }
+
+/* ─────────────────────────────────────────────────────
+   DOWNLOAD OFFLINE (IndexedDB)
+   Simpan gambar chapter sebagai blob agar bisa dibaca tanpa internet.
+───────────────────────────────────────────────────── */
+function idbReq(req) {
+  return new Promise((res, rej) => { req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error); });
+}
+
+const DL = {
+  _dbp: null,
+  open() {
+    if (!this._dbp) {
+      this._dbp = new Promise((resolve, reject) => {
+        const req = indexedDB.open('komikzone-offline', 1);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'chapterSlug' });
+          if (!db.objectStoreNames.contains('pages')) db.createObjectStore('pages', { keyPath: 'id' });
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    return this._dbp;
+  },
+  async _tx(store, mode) {
+    const db = await this.open();
+    return db.transaction(store, mode);
+  },
+  async isDownloaded(chSlug) {
+    try {
+      const tx = await this._tx('meta', 'readonly');
+      return !!(await idbReq(tx.objectStore('meta').get(chSlug)));
+    } catch { return false; }
+  },
+  async saveChapter(meta, blobs) {
+    const tx1 = await this._tx('meta', 'readwrite');
+    tx1.objectStore('meta').put(meta);
+    await new Promise((res, rej) => { tx1.oncomplete = res; tx1.onerror = () => rej(tx1.error); });
+    const tx2 = await this._tx('pages', 'readwrite');
+    const st = tx2.objectStore('pages');
+    blobs.forEach((blob, i) => st.put({ id: `${meta.chapterSlug}#${i}`, chapterSlug: meta.chapterSlug, idx: i, blob }));
+    await new Promise((res, rej) => { tx2.oncomplete = res; tx2.onerror = () => rej(tx2.error); });
+  },
+  async getMeta(chSlug) {
+    try {
+      const tx = await this._tx('meta', 'readonly');
+      return await idbReq(tx.objectStore('meta').get(chSlug));
+    } catch { return null; }
+  },
+  async getPages(chSlug, count) {
+    const tx = await this._tx('pages', 'readonly');
+    const st = tx.objectStore('pages');
+    const out = [];
+    for (let i = 0; i < count; i++) out.push(await idbReq(st.get(`${chSlug}#${i}`)));
+    return out;
+  },
+  async list() {
+    try {
+      const tx = await this._tx('meta', 'readonly');
+      return await idbReq(tx.objectStore('meta').getAll());
+    } catch { return []; }
+  },
+  async remove(chSlug) {
+    const tx1 = await this._tx('meta', 'readwrite');
+    tx1.objectStore('meta').delete(chSlug);
+    await new Promise((res, rej) => { tx1.oncomplete = res; tx1.onerror = () => rej(tx1.error); });
+    const tx2 = await this._tx('pages', 'readwrite');
+    const st = tx2.objectStore('pages');
+    const keys = await idbReq(st.getAllKeys());
+    keys.filter(k => String(k).startsWith(chSlug + '#')).forEach(k => st.delete(k));
+    await new Promise((res, rej) => { tx2.oncomplete = res; tx2.onerror = () => rej(tx2.error); });
+  },
+  async clear() {
+    for (const s of ['meta', 'pages']) {
+      const tx = await this._tx(s, 'readwrite');
+      tx.objectStore(s).clear();
+      await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+    }
+  }
+};
+
+function fmtSize(b) {
+  if (!b) return '0 B';
+  const u = ['B', 'KB', 'MB', 'GB'];
+  let i = 0;
+  while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+  return `${b.toFixed(b >= 10 || i === 0 ? 0 : 1)} ${u[i]}`;
+}
+
+// Ambil gambar chapter dari IndexedDB → object URLs (null jika tidak lengkap)
+async function getOfflineImages(chSlug) {
+  try {
+    const meta = await DL.getMeta(chSlug);
+    if (!meta) return null;
+    const pages = await DL.getPages(chSlug, meta.pageCount);
+    if (pages.length !== meta.pageCount || pages.some(p => !p?.blob)) return null;
+    return pages.map(p => URL.createObjectURL(p.blob));
+  } catch { return null; }
+}
+
+const _dlBusy = new Set();
+
+async function downloadChapter(manga, ch, btn) {
+  if (!manga || !ch?.slug) return;
+  if (_dlBusy.has(ch.slug)) return;
+  if (await DL.isDownloaded(ch.slug)) { showToast('Chapter ini sudah tersimpan offline ✅', 2000); return; }
+  _dlBusy.add(ch.slug);
+  const setBtn = (html, cls) => { if (btn) { btn.innerHTML = html; btn.className = 'ch-dl-btn ' + (cls || ''); } };
+  try {
+    setBtn('⏳ 0%', 'busy');
+    const d = await api(`${PROXY}/api/chapter?slug=${encodeURIComponent(ch.slug)}`);
+    const imgs = d?.images || [];
+    if (!imgs.length) throw new Error('gambar tidak ditemukan');
+    const blobs = [];
+    let done = 0, size = 0;
+    const fetchOne = async (src) => {
+      const r = await fetch(`${PROXY}/api/img?url=${encodeURIComponent(src)}`, { signal: AbortSignal.timeout(60000) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const b = await r.blob();
+      size += b.size; done++;
+      setBtn(`⏳ ${Math.round(done / imgs.length * 100)}%`, 'busy');
+      return b;
+    };
+    for (let i = 0; i < imgs.length; i += 3) {
+      blobs.push(...await Promise.all(imgs.slice(i, i + 3).map(fetchOne)));
+    }
+    await DL.saveChapter({
+      chapterSlug: ch.slug,
+      mangaSlug: manga.slug, mangaTitle: manga.title, mangaImg: manga.img,
+      chapterTitle: ch.title || 'Chapter',
+      pageCount: blobs.length, size,
+      downloadedAt: Date.now()
+    }, blobs);
+    setBtn('✅', 'done');
+    showToast(`✅ ${ch.title || 'Chapter'} tersimpan — bisa dibaca offline`, 2500);
+    updateOffCount();
+  } catch (e) {
+    console.warn('download err:', e.message);
+    setBtn('⬇️', '');
+    showToast('❌ Download gagal: ' + e.message, 3000);
+  } finally {
+    _dlBusy.delete(ch.slug);
+  }
+}
+
+// Intercept klik tombol download (capture phase, sebelum handler ch-item)
+document.addEventListener('click', async e => {
+  const btn = e.target.closest('[data-dl]');
+  if (!btn) return;
+  e.stopPropagation();
+  e.preventDefault();
+  const item = btn.closest('.ch-item');
+  const chSlug = btn.dataset.dl;
+  const chTitle = item?.querySelector('.ch-num')?.textContent?.trim() || 'Chapter';
+  // manga info dari context halaman detail
+  const manga = { slug: _curMangaSlug, title: _curTitle, img: _curImg };
+  // tandai tombol sudah-didownload saat render berikutnya
+  downloadChapter(manga, { slug: chSlug, title: chTitle }, btn);
+}, true);
+
+// Tandai tombol ⬇️→✅ untuk chapter yang sudah didownload (dipanggil setelah chapter list dirender)
+async function markDownloadedButtons() {
+  const btns = document.querySelectorAll('[data-dl]');
+  if (!btns.length) return;
+  for (const b of btns) {
+    if (b.classList.contains('done') || _dlBusy.has(b.dataset.dl)) continue;
+    if (await DL.isDownloaded(b.dataset.dl)) { b.innerHTML = '✅'; b.classList.add('done'); }
+  }
+}
+
+/* ─── Panel Offline di Library ─── */
+async function updateOffCount() {
+  const el = $('lib-off-count');
+  if (!el) return;
+  const n = (await DL.list()).length;
+  el.textContent = n ? `(${n})` : '';
+}
+
+async function renderOffline() {
+  const list = $('offline-list');
+  if (!list) return;
+  const metas = (await DL.list()).sort((a, b) => b.downloadedAt - a.downloadedAt);
+  if (!metas.length) {
+    list.innerHTML = `<div class="empty-box" style="padding:3rem 1rem"><div class="ei">📥</div><div class="et">Belum ada download</div><div class="es">Buka komik → daftar chapter → tekan ⬇️ untuk simpan dan baca offline.</div></div>`;
+  } else {
+    list.innerHTML = metas.map(m => `
+      <div class="off-item" data-ch="${esc(m.chapterSlug)}" data-title="${esc(m.mangaTitle)}">
+        <img src="${esc(m.mangaImg || '')}" loading="lazy" onerror="this.style.display='none'">
+        <div class="oi-body">
+          <div class="oi-title">${esc(m.mangaTitle)}</div>
+          <div class="oi-sub">${esc(m.chapterTitle)} • ${m.pageCount} hlm • ${fmtSize(m.size)}</div>
+        </div>
+        <button class="off-del" data-del="${esc(m.chapterSlug)}" title="Hapus download">🗑</button>
+      </div>`).join('');
+  }
+  const size = metas.reduce((a, m) => a + (m.size || 0), 0);
+  $('off-size').textContent = `📦 ${metas.length} chapter • ${fmtSize(size)} tersimpan di perangkat ini`;
+}
+
+$$('#lib-tabs .lib-tab').forEach(t => t.addEventListener('click', () => {
+  $$('#lib-tabs .lib-tab').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  const isOff = t.dataset.ltab === 'offline';
+  $('library-grid').classList.toggle('hidden', isOff);
+  $('offline-panel').classList.toggle('hidden', !isOff);
+  if (isOff) renderOffline();
+}));
+
+$('offline-list')?.addEventListener('click', async e => {
+  const del = e.target.closest('[data-del]');
+  if (del) {
+    e.stopPropagation();
+    if (!confirm('Hapus chapter ini dari penyimpanan offline?')) return;
+    await DL.remove(del.dataset.del);
+    renderOffline(); updateOffCount();
+    showToast('Download dihapus', 2000);
+    return;
+  }
+  const item = e.target.closest('.off-item');
+  if (item?.dataset.ch) openReader(item.dataset.ch, item.dataset.title || '');
+});
+
+$('off-clear-all')?.addEventListener('click', async () => {
+  if (!confirm('Hapus SEMUA chapter yang didownload?')) return;
+  await DL.clear();
+  renderOffline(); updateOffCount();
+  showToast('Semua download dihapus', 2000);
+});
 
 /* ─────────────────────────────────────────────────────
    NOTIFIKASI UPDATE BOOKMARK
