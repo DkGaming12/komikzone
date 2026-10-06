@@ -4271,6 +4271,23 @@ body::before {
 }
 .off-del:hover { opacity: 1; transform: scale(1.15); }
 
+/* Progress baca di kartu library */
+.kc-prog {
+  height: 4px;
+  background: rgba(255,255,255,.12);
+  border-radius: 999px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.kc-prog-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #7c5cff, #4ade80);
+  border-radius: 999px;
+  transition: width .4s ease;
+}
+.kc-prog-txt { font-size: .68rem; color: var(--txt3, #888); margin-top: 4px; }
+.kc-prog-txt.dim { opacity: .65; }
+
 .ch-empty {
   text-align: center;
   padding: 2.5rem;

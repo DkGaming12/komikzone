@@ -753,7 +753,20 @@ function renderLibrary() {
     return;
   }
   
-  grid.innerHTML = list.map(m => `
+  grid.innerHTML = list.map(m => {
+    // Progress baca: posisi chapter terakhir dibaca / total chapter
+    const hist = getHistory().find(x => x.mangaSlug === m.slug);
+    let progHtml = '';
+    if (hist && m.totalCh) {
+      const num = String(hist.chapterTitle || '').match(/[\d.]+/);
+      const cur = num ? parseFloat(num[0]) : 0;
+      const pct = m.totalCh ? Math.min(100, Math.round(cur / m.totalCh * 100)) : 0;
+      progHtml = `<div class="kc-prog"><div class="kc-prog-bar" style="width:${pct}%"></div></div>
+        <div class="kc-prog-txt">Ch ${cur || '?'} / ${m.totalCh} • ${pct}%</div>`;
+    } else if (m.totalCh) {
+      progHtml = `<div class="kc-prog-txt dim">${m.totalCh} chapter • belum dibaca</div>`;
+    }
+    return `
     <div class="komik-card" data-slug="${esc(m.slug)}">
       <div class="kc-thumb">
         <img class="kc-img" src="${esc(m.img || '')}" loading="lazy" onerror="this.onerror=null;this.parentElement.classList.add('noimg');this.remove()">
@@ -762,9 +775,10 @@ function renderLibrary() {
       </div>
       <div class="kc-body">
         <div class="kc-title">${esc(m.title)}</div>
+        ${progHtml}
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 $('library-grid')?.addEventListener('click', e => {
@@ -966,6 +980,7 @@ async function openDetail(slug) {
             <button class="btn-primary" id="d-read-btn"></button>
             <button class="btn-ghost" id="d-latest-btn">Baca Chapter Terbaru</button>
             <button class="btn-ghost" id="d-bm-btn" style="padding: 0 10px; font-size: 1.1rem;" title="Simpan ke Library">🔖</button>
+            <button class="btn-ghost" id="d-share-btn" style="padding: 0 10px; font-size: 1.1rem;" title="Bagikan komik ini">📤</button>
           </div>
         </div>
       </div>
@@ -999,6 +1014,15 @@ async function openDetail(slug) {
       <div class="ch-list" id="ch-list">
         ${buildChapterList(d.chapters || [], { slug, title: d.title, img: d.img })}
       </div>
+    </div>
+
+    <!-- Slot iklan -->
+    ${adBlock(1)}
+
+    <!-- Komik mirip -->
+    <div class="ch-section" id="similar-section">
+      <h3><span>📚 Komik Mirip</span></h3>
+      <div class="card-grid" id="similar-grid"></div>
     </div>`;
 
   // Wire up interactions
@@ -1007,6 +1031,22 @@ async function openDetail(slug) {
   const readBtn = $('d-read-btn');
   const latestBtn = $('d-latest-btn');
   const bmBtn = $('d-bm-btn');
+  const shareBtn = $('d-share-btn');
+  if (shareBtn) shareBtn.onclick = async () => {
+    const shareData = {
+      title: d.title,
+      text: `Baca ${d.title} bahasa Indonesia gratis di KomikZone!`,
+      url: location.href
+    };
+    if (navigator.share) {
+      try { await navigator.share(shareData); } catch {}
+    } else {
+      try {
+        await navigator.clipboard.writeText(location.href);
+        showToast('🔗 Link disalin! Bagikan ke temanmu', 2500);
+      } catch { showToast('Gagal menyalin link', 2000); }
+    }
+  };
 
   // Logic for Bookmarks
   const getBms = () => { try { return JSON.parse(localStorage.getItem('kz_bookmarks')) || []; } catch { return []; } };
@@ -1023,7 +1063,7 @@ async function openDetail(slug) {
       bmBtn.classList.remove('active-bm');
       showToast('Dihapus dari Library', 2000);
     } else {
-      list.unshift({ slug, title: d.title, img: d.img, score: d.score, type: d.type });
+      list.unshift({ slug, title: d.title, img: d.img, score: d.score, type: d.type, totalCh: (d.chapters || []).length });
       bmBtn.textContent = '✅ Tersimpan';
       bmBtn.classList.add('active-bm');
       showToast('Disimpan ke Library', 2000);
@@ -1062,6 +1102,38 @@ async function openDetail(slug) {
   _curMangaSlug = slug;
   // tandai tombol download untuk chapter yg sudah tersimpan offline
   markDownloadedButtons();
+  // update total chapter di bookmark (untuk progress bar library)
+  try {
+    const bl = getBmsGlobal();
+    const b = bl.find(x => x.slug === slug);
+    const tc = (d.chapters || []).length;
+    if (b && b.totalCh !== tc) { b.totalCh = tc; localStorage.setItem('kz_bookmarks', JSON.stringify(bl)); }
+  } catch {}
+  // muat rekomendasi komik mirip (berdasar genre)
+  loadSimilar(slug, d.genres || []);
+}
+
+// Rekomendasi: komik dengan genre sama, urut rating tertinggi
+async function loadSimilar(curSlug, genres) {
+  const sec = $('similar-section'), grid = $('similar-grid');
+  if (!sec || !grid) return;
+  if (!genres.length) { sec.classList.add('hidden'); return; }
+  grid.innerHTML = SKEL_CARD.repeat(6);
+  try {
+    const seen = new Set([curSlug]);
+    const items = [];
+    for (const g of genres.slice(0, 2)) {
+      const r = await api(`${PROXY}/api/list?page=1&order=score&genre=${encodeURIComponent(g)}`);
+      for (const m of (r?.items || [])) {
+        if (!seen.has(m.slug)) { seen.add(m.slug); items.push(m); }
+        if (items.length >= 12) break;
+      }
+      if (items.length >= 12) break;
+    }
+    if (!items.length) { sec.classList.add('hidden'); return; }
+    sec.classList.remove('hidden');
+    renderCards('similar-grid', items);
+  } catch { sec.classList.add('hidden'); }
 }
 
 function dRow(l, v) {
