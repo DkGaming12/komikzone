@@ -368,6 +368,39 @@ app.get('/api/list', async (req, res) => {
   }
 });
 
+/* ── /api/schedule: jadwal update mingguan ─────────────────────────
+   Kelompokkan komik yang baru update berdasarkan hari (WIB) dari
+   latest_chapter_time. 1=Senin .. 7=Minggu. */
+const WD_MAP = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
+app.get('/api/schedule', async (req, res) => {
+  try {
+    const pages = await Promise.all([1, 2, 3].map(p =>
+      getJSON(`/manga/list?page=${p}&page_size=40&type=project&is_update=true&sort=latest&sort_order=desc`, 1_800_000)
+    ));
+    const days = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] };
+    const seen = new Set();
+    for (const pg of pages) {
+      for (const m of (pg.data || [])) {
+        if (!m.manga_id || seen.has(m.manga_id)) continue;
+        seen.add(m.manga_id);
+        const t = m.latest_chapter_time || m.updated_at;
+        if (!t) continue;
+        const wdShort = new Date(t).toLocaleDateString('en-US', { timeZone: 'Asia/Jakarta', weekday: 'short' });
+        const wd = WD_MAP[wdShort];
+        if (!wd) continue;
+        days[wd].push({
+          ...mapItem(m),
+          updateRel: relTime(t)
+        });
+      }
+    }
+    res.json({ days, generated_at: new Date().toISOString() });
+  } catch (e) {
+    console.error('/api/schedule error:', e.message);
+    res.status(502).json({ error: 'Gagal memuat jadwal update.' });
+  }
+});
+
 /* ── /api/search ─────────────────────────────────────── */
 app.get('/api/search', searchLimiter, async (req, res) => {
   try {
@@ -624,7 +657,7 @@ app.get('/chapter/:slug', async (req, res) => {
 });
 
 /* ── Normal SPA fallback for other routes ── */
-app.get(/^\/(explore|top|all-series|genre|bookmark|p)(\/[^.]*)?$/, (req, res) => {
+app.get(/^\/(explore|top|all-series|genre|bookmark|jadwal|p)(\/[^.]*)?$/, (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 

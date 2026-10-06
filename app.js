@@ -81,7 +81,8 @@ const PAGE_PATHS = {
   top: { path: '/top', title: 'Top Komik' },
   allseries: { path: '/all-series', title: 'All Series' },
   genre: { path: '/genre', title: 'Genre Komik' },
-  library: { path: '/bookmark', title: 'Library Favorit' }
+  library: { path: '/bookmark', title: 'Library Favorit' },
+  schedule: { path: '/jadwal', title: 'Jadwal Update Komik' }
 };
 const DEFAULT_TITLE = document.title;
 let _navPushed = false;
@@ -143,6 +144,7 @@ function routeFromPath() {
   if (p === '/all-series') return navigate('allseries');
   if (p === '/genre') return navigate('genre');
   if (p === '/bookmark') return navigate('library');
+  if (p === '/jadwal') return navigate('schedule');
   let m;
   if ((m = p.match(/^\/genre\/([^/]+)$/))) return loadGenre(m[1], m[1].replace(/-/g, ' '), 1);
   if ((m = p.match(/^\/manga\/([^/]+)$/))) return openDetail(m[1]);
@@ -815,6 +817,34 @@ window.loadTop = loadTop;
 $$('#pg-top .filt').forEach(b => b.addEventListener('click', () => {
   $$('#pg-top .filt').forEach(x => x.classList.remove('active'));
   b.classList.add('active'); topType = b.dataset.t === 'all' ? '' : b.dataset.t; loadTop(1);
+}));
+
+/* ─────────────────────────────────────────────────────
+   JADWAL UPDATE (Senin–Minggu)
+───────────────────────────────────────────────────── */
+let schData = null;
+let schDay = (() => { const d = new Date().getDay(); return d === 0 ? 7 : d; })(); // 1=Senin..7=Minggu
+
+async function loadSchedule() {
+  gridLoading('sch-grid');
+  if (!schData) {
+    const d = await api(`${PROXY}/api/schedule`);
+    if (!d || !d.days) {
+      $('sch-grid').innerHTML = retryBox('Jadwal gagal dimuat.');
+      return;
+    }
+    schData = d.days;
+  }
+  $$('#sch-days .filt').forEach(b => b.classList.toggle('active', +b.dataset.d === schDay));
+  renderCards('sch-grid', schData[schDay] || [], { emptyMsg: 'Belum ada komik yang update hari ini' });
+}
+window.loadSchedule = loadSchedule;
+
+$$('#sch-days .filt').forEach(b => b.addEventListener('click', () => {
+  $$('#sch-days .filt').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  schDay = +b.dataset.d;
+  renderCards('sch-grid', (schData && schData[schDay]) || [], { emptyMsg: 'Belum ada komik yang update hari ini' });
 }));
 
 /* ─────────────────────────────────────────────────────
@@ -1507,6 +1537,7 @@ function navigate(name) {
 
   if (name === 'explore' && !$('exp-grid').children.length) loadExplore(1);
   if (name === 'top' && !$('top-grid').children.length) loadTop(1);
+  if (name === 'schedule' && !$('sch-grid').children.length) loadSchedule();
   if (name === 'allseries' && !$('all-grid').children.length) loadAllSeries(1);
   if (name === 'genre' && !$('genre-grid').children.length) buildGenreTiles();
   if (name === 'library') renderLibrary();
