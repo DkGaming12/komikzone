@@ -1427,7 +1427,7 @@ function goReaderChapter(delta) {
 $('r-back').addEventListener('click', () => { if (_navPushed) history.back(); else navigate('detail'); });
 $('r-prev-ch').addEventListener('click', () => goReaderChapter(+1));
 $('r-next-ch').addEventListener('click', () => goReaderChapter(-1));
-$('r-dl').addEventListener('click', () => {
+$('rs-dl')?.addEventListener('click', () => {
   const ch = _curChapters[_rChIdx];
   if (!ch?.slug) { showToast('Chapter belum dimuat', 2000); return; }
   downloadChapter(
@@ -1447,9 +1447,9 @@ function applyBrightness() {
   if (s) s.value = _brightness;
   if (v) v.textContent = _brightness + '%';
 }
-$('r-bright')?.addEventListener('click', e => {
+$('r-settings')?.addEventListener('click', e => {
   e.stopPropagation();
-  $('bright-pop')?.classList.toggle('hidden');
+  $('reader-settings-pop')?.classList.toggle('hidden');
 });
 $('bright-slider')?.addEventListener('input', e => {
   _brightness = parseInt(e.target.value);
@@ -1474,8 +1474,8 @@ $('saver-toggle')?.addEventListener('change', e => {
 });
 syncSaverToggle();
 document.addEventListener('click', e => {
-  if (!e.target.closest('#bright-pop') && !e.target.closest('#r-bright')) {
-    $('bright-pop')?.classList.add('hidden');
+  if (!e.target.closest('#reader-settings-pop') && !e.target.closest('#r-settings')) {
+    $('reader-settings-pop')?.classList.add('hidden');
   }
 });
 
@@ -1484,8 +1484,8 @@ let _autoNext = localStorage.getItem('kz_autonext') === '1';
 let _autoNextTimer = null;
 let _autoNextObs = null;
 function updateAutoNextBtn() {
-  const b = $('r-autonext');
-  if (b) { b.classList.toggle('active', _autoNext); b.style.opacity = _autoNext ? '1' : '.45'; }
+  const t = $('autonext-toggle');
+  if (t) t.checked = _autoNext;
 }
 function setupAutoNext() {
   if (_autoNextObs) { _autoNextObs.disconnect(); _autoNextObs = null; }
@@ -1509,13 +1509,14 @@ function setupAutoNext() {
   }, { threshold: 0.7 });
   _autoNextObs.observe(last);
 }
-$('r-autonext')?.addEventListener('click', () => {
-  _autoNext = !_autoNext;
+$('autonext-toggle')?.addEventListener('change', e => {
+  _autoNext = e.target.checked;
   try { localStorage.setItem('kz_autonext', _autoNext ? '1' : '0'); } catch {}
-  updateAutoNextBtn();
   setupAutoNext();
   showToast(_autoNext ? '⏭️ Auto-lanjut AKTIF' : '⏭️ Auto-lanjut mati', 1800);
 });
+syncSaverToggle();
+updateAutoNextBtn();
 
 // Retry a single failed reader page
 $('reader-pages').addEventListener('click', e => {
@@ -1530,11 +1531,11 @@ $('reader-pages').addEventListener('click', e => {
 });
 
 let _rFitWide = false;
-$('r-fit-toggle').addEventListener('click', () => {
+$('rs-fit')?.addEventListener('click', () => {
   _rFitWide = !_rFitWide;
   $('reader-pages').classList.toggle('wide', _rFitWide);
-  $('r-fit-toggle').classList.toggle('active', _rFitWide);
-  $('r-fit-toggle').textContent = _rFitWide ? '⇔ Kompak' : '⇔ Lebar';
+  $('rs-fit').classList.toggle('active', _rFitWide);
+  $('rs-fit').textContent = _rFitWide ? '⇔ Kompak' : '⇔ Lebar';
 });
 
 /* ─────────────────────────────────────────────────────

@@ -4271,8 +4271,8 @@ body::before {
 }
 .off-del:hover { opacity: 1; transform: scale(1.15); }
 
-/* Brightness popup di reader */
-.bright-pop {
+/* Panel pengaturan reader */
+.reader-settings {
   position: fixed;
   bottom: 90px;
   left: 50%;
@@ -4280,26 +4280,26 @@ body::before {
   background: rgba(18, 18, 30, .97);
   border: 1px solid var(--border2, rgba(255,255,255,.12));
   border-radius: 16px;
-  padding: 14px 18px;
+  padding: 16px 18px;
   z-index: 3000;
   box-shadow: 0 18px 50px rgba(0,0,0,.5);
-  min-width: 260px;
+  width: min(300px, 88vw);
 }
-.bp-row { display: flex; align-items: center; gap: 10px; }
-.bp-row input[type="range"] {
-  flex: 1;
-  accent-color: #fbbf24;
-  cursor: pointer;
-}
-.bp-val { text-align: center; font-size: .78rem; color: var(--txt2, #aaa); margin-top: 6px; font-weight: 700; }
-.bp-toggle {
-  display: flex; align-items: center; gap: 8px;
-  margin-top: 10px; padding-top: 10px;
+.rs-title { font-size: .88rem; font-weight: 800; margin-bottom: 12px; text-align: center; }
+.rs-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.rs-row input[type="range"] { flex: 1; accent-color: #fbbf24; cursor: pointer; }
+.rs-label { font-size: 1rem; }
+.rs-val { font-size: .78rem; color: var(--txt2, #aaa); font-weight: 700; min-width: 42px; text-align: right; }
+.rs-toggle {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0;
   border-top: 1px solid var(--border, rgba(255,255,255,.08));
-  font-size: .82rem; cursor: pointer; user-select: none;
+  font-size: .83rem; cursor: pointer; user-select: none;
 }
-.bp-toggle input { accent-color: #4ade80; width: 16px; height: 16px; cursor: pointer; }
-.bp-hint { font-size: .68rem; color: var(--txt3, #888); margin-top: 4px; text-align: center; }
+.rs-toggle input { accent-color: #4ade80; width: 17px; height: 17px; cursor: pointer; flex-shrink: 0; }
+.rs-toggle small { display: block; font-size: .68rem; color: var(--txt3, #888); font-weight: 400; }
+.rs-btns { display: flex; gap: 8px; margin-top: 10px; }
+.rs-btns .r-btn { flex: 1; text-align: center; padding: 8px; }
 
 /* Progress baca di kartu library */
 .kc-prog {

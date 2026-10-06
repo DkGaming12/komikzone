@@ -506,13 +506,10 @@
         <button class="r-back" id="r-back">← Kembali</button>
         <div class="r-title" id="r-title">Memuat...</div>
         <div class="r-controls">
-          <button class="r-btn" id="r-fit-toggle" title="Toggle lebar halaman">⇔ Lebar</button>
-          <button class="r-btn" id="r-bright" title="Atur kecerahan">☀️</button>
-          <button class="r-btn" id="r-dl" title="Download chapter ini untuk dibaca offline">⬇</button>
           <button class="r-btn" id="r-prev-ch" title="Chapter sebelumnya">‹ Ch</button>
           <span class="r-ch-info" id="r-ch-info"></span>
           <button class="r-btn" id="r-next-ch" title="Chapter berikutnya">Ch ›</button>
-          <button class="r-btn" id="r-autonext" title="Otomatis lanjut ke chapter berikutnya">⏭️</button>
+          <button class="r-btn" id="r-settings" title="Pengaturan reader">⚙️</button>
         </div>
       </div>
 
@@ -521,19 +518,26 @@
         <div class="reader-pages" id="reader-pages"></div>
       </div>
 
-      <!-- Brightness popup -->
-      <div class="bright-pop hidden" id="bright-pop">
-        <div class="bp-row">
-          <span>🔅</span>
+      <!-- Panel pengaturan reader -->
+      <div class="reader-settings hidden" id="reader-settings-pop">
+        <div class="rs-title">⚙️ Pengaturan Reader</div>
+        <div class="rs-row">
+          <span class="rs-label">🔅</span>
           <input type="range" id="bright-slider" min="30" max="100" value="100" step="5">
-          <span>🔆</span>
+          <span class="rs-val" id="bright-val">100%</span>
         </div>
-        <div class="bp-val" id="bright-val">100%</div>
-        <label class="bp-toggle">
+        <label class="rs-toggle">
           <input type="checkbox" id="saver-toggle">
-          <span>📶 Mode hemat data</span>
+          <span>📶 Mode hemat data <small>±70% lebih ringan</small></span>
         </label>
-        <div class="bp-hint">Gambar dikompres ±70% lebih ringan</div>
+        <label class="rs-toggle">
+          <input type="checkbox" id="autonext-toggle">
+          <span>⏭️ Auto-lanjut chapter <small>otomatis buka berikutnya</small></span>
+        </label>
+        <div class="rs-btns">
+          <button class="r-btn" id="rs-fit">⇔ Lebar</button>
+          <button class="r-btn" id="rs-dl">⬇️ Download chapter</button>
+        </div>
       </div>
 
       <!-- Floating chapter nav (auto-hide on scroll, tap to show) -->
