@@ -349,6 +349,11 @@
           <button class="filt" data-t="Manhwa">Manhwa</button>
           <button class="filt" data-t="Manhua">Manhua</button>
         </div>
+        <div class="filt-row">
+          <button class="filt sfilt active" data-s="">Semua Status</button>
+          <button class="filt sfilt" data-s="ongoing">🔄 Ongoing</button>
+          <button class="filt sfilt" data-s="completed">✅ Tamat</button>
+        </div>
         <div class="sort-row">
           <span>Urutkan:</span>
           <select id="exp-sort">
@@ -416,6 +421,12 @@
       <div class="pg-header">
         <h1>🔖 Library</h1>
         <p>Koleksi komik yang Anda simpan & download untuk dibaca offline.</p>
+      </div>
+      <div class="stats-card" id="stats-card">
+        <div class="stat-box"><div class="stat-num" id="st-today">0</div><div class="stat-lbl">Chapter hari ini</div></div>
+        <div class="stat-box"><div class="stat-num" id="st-week">0</div><div class="stat-lbl">7 hari terakhir</div></div>
+        <div class="stat-box"><div class="stat-num" id="st-total">0</div><div class="stat-lbl">Total dibaca</div></div>
+        <div class="stat-box"><div class="stat-num" id="st-streak">0</div><div class="stat-lbl">Streak harian</div></div>
       </div>
       <div class="lib-tabs" id="lib-tabs">
         <button class="lib-tab active" data-ltab="fav">🔖 Favorit</button>
@@ -496,6 +507,7 @@
         <div class="r-title" id="r-title">Memuat...</div>
         <div class="r-controls">
           <button class="r-btn" id="r-fit-toggle" title="Toggle lebar halaman">⇔ Lebar</button>
+          <button class="r-btn" id="r-bright" title="Atur kecerahan">☀️</button>
           <button class="r-btn" id="r-dl" title="Download chapter ini untuk dibaca offline">⬇</button>
           <button class="r-btn" id="r-prev-ch" title="Chapter sebelumnya">‹ Ch</button>
           <span class="r-ch-info" id="r-ch-info"></span>
@@ -506,6 +518,16 @@
       <!-- Pages container -->
       <div class="reader-wrap" id="reader-wrap">
         <div class="reader-pages" id="reader-pages"></div>
+      </div>
+
+      <!-- Brightness popup -->
+      <div class="bright-pop hidden" id="bright-pop">
+        <div class="bp-row">
+          <span>🔅</span>
+          <input type="range" id="bright-slider" min="30" max="100" value="100" step="5">
+          <span>🔆</span>
+        </div>
+        <div class="bp-val" id="bright-val">100%</div>
       </div>
 
       <!-- Floating chapter nav (auto-hide on scroll, tap to show) -->

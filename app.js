@@ -69,7 +69,7 @@ function retryBox(msg = 'Gagal memuat data.') {
 let curPg = 'home';
 let prevPg = 'home';
 
-let expSort = 'update', expType = '';
+let expSort = 'update', expType = '', expStatus = '';
 let topType = '';
 
 let slideIdx = 0, slideN = 0, slideTimer = null;
@@ -713,6 +713,41 @@ function clearHistory() {
   renderHistory();
 }
 
+/* ─── Statistik baca harian + streak ─── */
+const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const getReadStats = () => { try { return JSON.parse(localStorage.getItem('kz_read_stats')) || {}; } catch { return {}; } };
+function bumpReadStat() {
+  try {
+    const s = getReadStats();
+    const k = dayKey();
+    s[k] = (s[k] || 0) + 1;
+    // prune > 120 hari
+    const cutoff = dayKey(new Date(Date.now() - 120 * 864e5));
+    for (const key of Object.keys(s)) if (key < cutoff) delete s[key];
+    localStorage.setItem('kz_read_stats', JSON.stringify(s));
+  } catch {}
+}
+function calcStreak(s) {
+  let streak = 0;
+  const d = new Date();
+  if (!s[dayKey(d)]) d.setDate(d.getDate() - 1); // hari ini belum baca → mulai dari kemarin
+  while (s[dayKey(d)] > 0) { streak++; d.setDate(d.getDate() - 1); }
+  return streak;
+}
+function renderReadStats() {
+  const s = getReadStats();
+  const today = s[dayKey()] || 0;
+  let week = 0;
+  for (let i = 0; i < 7; i++) week += s[dayKey(new Date(Date.now() - i * 864e5))] || 0;
+  const total = Object.values(s).reduce((a, b) => a + b, 0);
+  const streak = calcStreak(s);
+  const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+  set('st-today', today);
+  set('st-week', week);
+  set('st-total', total >= 1000 ? (total / 1000).toFixed(1) + 'k' : total);
+  set('st-streak', (streak > 0 ? '🔥 ' : '') + streak);
+}
+
 function renderHistory() {
   const h = getHistory();
   const blk = $('history-blk');
@@ -742,6 +777,7 @@ function renderLibrary() {
   const grid = $('library-grid');
   if (!grid) return;
   updateOffCount();
+  renderReadStats();
   const list = (function() { try { return JSON.parse(localStorage.getItem('kz_bookmarks')) || []; } catch { return []; } })();
   
   if (!list.length) {
@@ -794,6 +830,7 @@ async function loadExplore(pg = 1) {
   gridLoading('exp-grid');
   let url = `${PROXY}/api/list?page=${pg}&order=${expSort}`;
   if (expType) url += `&type=${encodeURIComponent(expType)}`;
+  if (expStatus) url += `&status=${encodeURIComponent(expStatus)}`;
   const d = await api(url);
   if (!d) {
     $('exp-grid').innerHTML = retryBox('Daftar komik gagal dimuat.');
@@ -805,9 +842,13 @@ async function loadExplore(pg = 1) {
 }
 window.loadExplore = loadExplore;
 
-$$('#pg-explore .filt').forEach(b => b.addEventListener('click', () => {
-  $$('#pg-explore .filt').forEach(x => x.classList.remove('active'));
+$$('#pg-explore .filt[data-t]').forEach(b => b.addEventListener('click', () => {
+  $$('#pg-explore .filt[data-t]').forEach(x => x.classList.remove('active'));
   b.classList.add('active'); expType = b.dataset.t; loadExplore(1);
+}));
+$$('#pg-explore .sfilt').forEach(b => b.addEventListener('click', () => {
+  $$('#pg-explore .sfilt').forEach(x => x.classList.remove('active'));
+  b.classList.add('active'); expStatus = b.dataset.s; loadExplore(1);
 }));
 $('exp-sort').addEventListener('change', () => { expSort = $('exp-sort').value; loadExplore(1); });
 
@@ -1281,6 +1322,7 @@ async function openReader(chSlug, title) {
 
   if (_curMangaSlug && ch.slug) {
     saveHistory(_curMangaSlug, _curTitle, _curImg, ch.slug, ch.title || 'Chapter');
+    bumpReadStat();
   }
 
   // Counter 15 chapter
@@ -1322,6 +1364,7 @@ async function openReader(chSlug, title) {
     </div>`;
   });
   pages.innerHTML = pagesHtml;
+  applyBrightness();
   if (isOffline) {
     $('r-title').textContent += ' 📥';
     $('r-title').title = 'Dibaca dari penyimpanan offline';
@@ -1390,6 +1433,31 @@ $('r-dl').addEventListener('click', () => {
     { slug: ch.slug, title: ch.title },
     null
   );
+});
+
+/* ─── Kontrol kecerahan reader ─── */
+let _brightness = parseInt(localStorage.getItem('kz_brightness') || '100');
+function applyBrightness() {
+  document.querySelectorAll('#reader-pages img').forEach(img => {
+    img.style.filter = _brightness >= 100 ? '' : `brightness(${_brightness / 100})`;
+  });
+  const s = $('bright-slider'), v = $('bright-val');
+  if (s) s.value = _brightness;
+  if (v) v.textContent = _brightness + '%';
+}
+$('r-bright')?.addEventListener('click', e => {
+  e.stopPropagation();
+  $('bright-pop')?.classList.toggle('hidden');
+});
+$('bright-slider')?.addEventListener('input', e => {
+  _brightness = parseInt(e.target.value);
+  try { localStorage.setItem('kz_brightness', String(_brightness)); } catch {}
+  applyBrightness();
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('#bright-pop') && !e.target.closest('#r-bright')) {
+    $('bright-pop')?.classList.add('hidden');
+  }
 });
 
 // Retry a single failed reader page

@@ -4271,6 +4271,28 @@ body::before {
 }
 .off-del:hover { opacity: 1; transform: scale(1.15); }
 
+/* Brightness popup di reader */
+.bright-pop {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(18, 18, 30, .97);
+  border: 1px solid var(--border2, rgba(255,255,255,.12));
+  border-radius: 16px;
+  padding: 14px 18px;
+  z-index: 3000;
+  box-shadow: 0 18px 50px rgba(0,0,0,.5);
+  min-width: 260px;
+}
+.bp-row { display: flex; align-items: center; gap: 10px; }
+.bp-row input[type="range"] {
+  flex: 1;
+  accent-color: #fbbf24;
+  cursor: pointer;
+}
+.bp-val { text-align: center; font-size: .78rem; color: var(--txt2, #aaa); margin-top: 6px; font-weight: 700; }
+
 /* Progress baca di kartu library */
 .kc-prog {
   height: 4px;
@@ -4287,6 +4309,26 @@ body::before {
 }
 .kc-prog-txt { font-size: .68rem; color: var(--txt3, #888); margin-top: 4px; }
 .kc-prog-txt.dim { opacity: .65; }
+
+/* Statistik baca di Library */
+.stats-card {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 1.25rem;
+}
+.stat-box {
+  background: var(--glass, rgba(255,255,255,.05));
+  border: 1px solid var(--border, rgba(255,255,255,.08));
+  border-radius: 14px;
+  padding: 12px 6px;
+  text-align: center;
+}
+.stat-num { font-size: 1.25rem; font-weight: 800; }
+.stat-lbl { font-size: .66rem; color: var(--txt3, #888); margin-top: 4px; }
+@media (max-width: 480px) {
+  .stats-card { grid-template-columns: repeat(2, 1fr); }
+}
 
 .ch-empty {
   text-align: center;
