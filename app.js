@@ -1449,7 +1449,7 @@ function applyBrightness() {
 }
 $('r-settings')?.addEventListener('click', e => {
   e.stopPropagation();
-  $('chlist-pop')?.classList.add('hidden');
+  setChlist(false);
   $('reader-settings-pop')?.classList.toggle('hidden');
 });
 $('bright-slider')?.addEventListener('input', e => {
@@ -1481,6 +1481,11 @@ document.addEventListener('click', e => {
 });
 
 /* ─── Popup daftar chapter di reader ─── */
+function setChlist(open) {
+  $('chlist-pop')?.classList.toggle('hidden', !open);
+  // kunci scroll halaman belakang agar pull-to-refresh tidak ke-trigger
+  document.body.style.overflow = open ? 'hidden' : '';
+}
 function renderChListPop(filter = '') {
   const wrap = $('chlist-items');
   if (!wrap) return;
@@ -1498,21 +1503,20 @@ function renderChListPop(filter = '') {
 }
 $('r-chlist')?.addEventListener('click', e => {
   e.stopPropagation();
-  $('reader-settings-pop')?.classList.add('hidden');
-  const pop = $('chlist-pop');
-  const opening = pop?.classList.contains('hidden');
-  if (opening) {
+  const willOpen = $('chlist-pop')?.classList.contains('hidden');
+  if (willOpen) {
+    $('reader-settings-pop')?.classList.add('hidden');
     const q = $('chlist-q');
     if (q) q.value = '';
     renderChListPop();
   }
-  pop?.classList.toggle('hidden');
+  setChlist(willOpen);
 });
 $('chlist-q')?.addEventListener('input', e => renderChListPop(e.target.value));
 $('chlist-items')?.addEventListener('click', e => {
   const it = e.target.closest('.chlist-item');
   if (!it?.dataset.ch) return;
-  $('chlist-pop')?.classList.add('hidden');
+  setChlist(false);
   const idx = _curChapters.findIndex(c => c.slug === it.dataset.ch);
   if (idx < 0 || idx === _rChIdx) return;
   if (idx < _rChIdx) markChapterDone(); // maju = chapter ini selesai
@@ -1522,7 +1526,7 @@ $('chlist-items')?.addEventListener('click', e => {
 // tutup popup chapter saat klik di luar
 document.addEventListener('click', e => {
   if (!e.target.closest('#chlist-pop') && !e.target.closest('#r-chlist')) {
-    $('chlist-pop')?.classList.add('hidden');
+    setChlist(false);
   }
 });
 
@@ -1777,6 +1781,8 @@ function showPage(id) {
 
 function navigate(name) {
   if (name === curPg && name !== 'detail' && name !== 'reader' && name !== 'genreview' && name !== 'page') return;
+  // pastikan tidak ada popup yang mengunci scroll tertinggal terbuka
+  document.body.style.overflow = '';
   $$('.pg').forEach(p => p.classList.remove('active'));
   $(`pg-${name}`)?.classList.add('active');
 

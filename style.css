@@ -322,6 +322,7 @@ body::before {
   overflow: hidden;
   max-height: 440px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .search-drop.open {
@@ -442,7 +443,7 @@ body::before {
   background: none; border: none; cursor: pointer;
   color: var(--acc, #8b5cf6); font-size: .78rem; font-weight: 700;
 }
-.notif-list { max-height: 380px; overflow-y: auto; }
+.notif-list { max-height: 380px; overflow-y: auto; overscroll-behavior: contain; }
 .notif-item {
   display: flex; gap: 12px; align-items: center;
   padding: 10px 14px; cursor: pointer;
@@ -4317,7 +4318,7 @@ body::before {
   box-sizing: border-box;
 }
 .chlist-search input:focus { border-color: rgba(139, 92, 246, .6); }
-.chlist-items { max-height: 46vh; overflow-y: auto; }
+.chlist-items { max-height: 46vh; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .chlist-item {
   display: flex; align-items: center; justify-content: space-between;
   gap: 10px;
