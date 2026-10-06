@@ -1623,6 +1623,114 @@ function initPopup() {
 }
 
 /* ─────────────────────────────────────────────────────
+   NOTIFIKASI UPDATE BOOKMARK
+   Cek chapter terbaru tiap komik di library; tampilkan bel notif
+   jika ada chapter baru sejak terakhir dilihat.
+───────────────────────────────────────────────────── */
+const getBmsGlobal = () => { try { return JSON.parse(localStorage.getItem('kz_bookmarks')) || []; } catch { return []; } };
+const getNotifSeen = () => { try { return JSON.parse(localStorage.getItem('kz_notif_seen')) || {}; } catch { return {}; } };
+const setNotifSeen = (o) => { try { localStorage.setItem('kz_notif_seen', JSON.stringify(o)); } catch {} };
+
+let notifUpdates = [];
+
+function renderNotifBadge() {
+  const badge = $('notif-badge');
+  if (!badge) return;
+  const n = notifUpdates.length;
+  badge.hidden = n === 0;
+  badge.textContent = n > 99 ? '99+' : n;
+}
+
+function renderNotifList() {
+  const list = $('notif-list');
+  if (!list) return;
+  if (!notifUpdates.length) {
+    const bms = getBmsGlobal();
+    list.innerHTML = `<div class="notif-empty">${bms.length ? '🎉 Semua update sudah dibaca!' : '🔖 Bookmark komik favoritmu,<br>notifikasi update akan muncul di sini.'}</div>`;
+    return;
+  }
+  list.innerHTML = notifUpdates.map(u => `
+    <div class="notif-item" data-slug="${esc(u.slug)}">
+      <img src="${esc(u.img)}" alt="" loading="lazy" onerror="this.style.display='none'">
+      <div class="ni-body">
+        <div class="ni-title">${esc(u.title)}</div>
+        <div class="ni-ch">📖 ${esc(u.chTitle)} baru!</div>
+        <div class="ni-time">${esc(u.date || '')}</div>
+      </div>
+    </div>`).join('');
+}
+
+async function checkNotif() {
+  const bms = getBmsGlobal();
+  if (!bms.length) { notifUpdates = []; renderNotifBadge(); renderNotifList(); return; }
+  const seen = getNotifSeen();
+  const firstRun = !localStorage.getItem('kz_notif_init');
+  const newSeen = { ...seen };
+  let seenChanged = false;
+  try {
+    const slugs = bms.map(b => b.slug).join(',');
+    const r = await fetch(`${PROXY}/api/notif-check?slugs=${encodeURIComponent(slugs)}&_t=${Date.now()}`, { signal: AbortSignal.timeout(30000) });
+    if (!r.ok) return;
+    const d = await r.json();
+    const updates = [];
+    for (const item of (d.items || [])) {
+      if (!item.chSlug) continue;
+      const bm = bms.find(b => b.slug === item.slug);
+      if (!bm) continue;
+      if (firstRun || seen[item.slug] === undefined) {
+        // inisialisasi / bookmark baru: anggap sudah dilihat, jangan notif
+        if (newSeen[item.slug] !== item.chSlug) { newSeen[item.slug] = item.chSlug; seenChanged = true; }
+      } else if (seen[item.slug] !== item.chSlug) {
+        updates.push({ slug: item.slug, title: bm.title, img: bm.img, chTitle: item.chTitle, chSlug: item.chSlug, date: item.date });
+      }
+    }
+    if (firstRun) { try { localStorage.setItem('kz_notif_init', '1'); } catch {} seenChanged = true; }
+    if (seenChanged) setNotifSeen(newSeen);
+    notifUpdates = updates;
+  } catch (e) {
+    console.warn('checkNotif err:', e.message);
+  }
+  renderNotifBadge();
+  renderNotifList();
+}
+
+document.addEventListener('click', e => {
+  const item = e.target.closest('.notif-item');
+  if (item) {
+    const slug = item.dataset.slug;
+    const u = notifUpdates.find(x => x.slug === slug);
+    if (u) {
+      const seen = getNotifSeen();
+      seen[slug] = u.chSlug;
+      setNotifSeen(seen);
+    }
+    notifUpdates = notifUpdates.filter(x => x.slug !== slug);
+    renderNotifBadge(); renderNotifList();
+    $('notif-drop')?.classList.remove('open');
+    openDetail(slug);
+    return;
+  }
+  if (e.target.closest('#notif-bell')) {
+    $('notif-drop')?.classList.toggle('open');
+  } else if (!e.target.closest('#notif-wrap')) {
+    $('notif-drop')?.classList.remove('open');
+  }
+});
+
+$('notif-clear')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const seen = getNotifSeen();
+  notifUpdates.forEach(u => { seen[u.slug] = u.chSlug; });
+  setNotifSeen(seen);
+  notifUpdates = [];
+  renderNotifBadge(); renderNotifList();
+});
+
+// cek saat load + tiap 5 menit + saat tab kembali aktif
+setInterval(checkNotif, 5 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNotif(); });
+
+/* ─────────────────────────────────────────────────────
    INIT
 ───────────────────────────────────────────────────── */
 (async () => {
@@ -1635,6 +1743,8 @@ function initPopup() {
     console.error('Init error:', err);
     showToast('Gagal memuat data. Coba refresh halaman.');
   }
+  // cek notifikasi update bookmark (tidak blocking)
+  checkNotif();
 })();
 
 /* =====================================================

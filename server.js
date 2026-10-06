@@ -401,6 +401,30 @@ app.get('/api/schedule', async (req, res) => {
   }
 });
 
+
+/* ── /api/notif-check: cek chapter terbaru untuk daftar slug ────
+   Query: ?slugs=slug1,slug2 (maks 30). Return: [{slug, chSlug, chTitle, date}] */
+app.get('/api/notif-check', async (req, res) => {
+  try {
+    const slugs = String(req.query.slugs || '').split(',')
+      .map(x => x.trim()).filter(Boolean).slice(0, 30);
+    if (!slugs.length) return res.json({ items: [] });
+    const items = await Promise.all(slugs.map(async (slug) => {
+      try {
+        const chapters = await fetchChapters(slug);
+        const c = chapters[0];
+        return c
+          ? { slug, chSlug: c.slug, chTitle: c.title, date: c.date }
+          : { slug, chSlug: null };
+      } catch { return { slug, chSlug: null }; }
+    }));
+    res.json({ items });
+  } catch (e) {
+    console.error('/api/notif-check error:', e.message);
+    res.status(502).json({ error: 'Gagal cek update.' });
+  }
+});
+
 /* ── /api/search ─────────────────────────────────────── */
 app.get('/api/search', searchLimiter, async (req, res) => {
   try {
