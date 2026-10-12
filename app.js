@@ -1291,8 +1291,9 @@ function readerAutoNext() {
   }
 }
 
-async function openReader(chSlug, title) {
+async function openReader(chSlug, title, opts = {}) {
   if (!chSlug) return;
+  const isReload = !!opts.isReload;
   navigate('reader');
   setUrl(`/chapter/${chSlug}`);
 
@@ -1322,13 +1323,15 @@ async function openReader(chSlug, title) {
 
   if (_curMangaSlug && ch.slug) {
     saveHistory(_curMangaSlug, _curTitle, _curImg, ch.slug, ch.title || 'Chapter');
-    bumpReadStat();
+    if (!isReload) bumpReadStat();
   }
 
-  // Counter 15 chapter
-  _chReadCount++;
-  try { localStorage.setItem('kz_ch_read', _chReadCount.toString()); } catch { }
-  if (_chReadCount % 15 === 0) showTrakteerPopup();
+  // Counter 15 chapter (reload tidak dihitung sebagai baca chapter baru)
+  if (!isReload) {
+    _chReadCount++;
+    try { localStorage.setItem('kz_ch_read', _chReadCount.toString()); } catch { }
+    if (_chReadCount % 15 === 0) showTrakteerPopup();
+  }
 
   pages.innerHTML = SKEL_READER;
 
@@ -1391,7 +1394,27 @@ async function openReader(chSlug, title) {
   setupAutoNext();
   if (_rAutoTimer) { clearTimeout(_rAutoTimer); _rAutoTimer = null; }
   _rMaxScroll = 0;
-  window.scrollTo({ top: 0 });
+  if (opts.keepPageIdx != null) {
+    // Reload: kembalikan posisi baca ke halaman semula
+    requestAnimationFrame(() => restoreReaderPage(opts.keepPageIdx));
+  } else {
+    window.scrollTo({ top: 0 });
+  }
+}
+
+/* Kembalikan posisi baca ke halaman ke-idx setelah reload chapter */
+function restoreReaderPage(idx) {
+  const el = document.querySelectorAll('#reader-pages .r-page')[idx];
+  if (!el) { window.scrollTo({ top: 0 }); return; }
+  const go = () => {
+    const y = el.getBoundingClientRect().top + window.scrollY - 70; // di bawah toolbar
+    window.scrollTo({ top: Math.max(0, y) });
+  };
+  go();
+  // Sesuaikan sekali lagi saat gambar halaman itu selesai dimuat
+  // (tinggi placeholder shimmer bisa berubah)
+  const img = el.querySelector('img');
+  if (img && !img.complete) img.addEventListener('load', go, { once: true });
 }
 
 function updateReaderNav() {
@@ -1427,6 +1450,24 @@ function goReaderChapter(delta) {
 $('r-back').addEventListener('click', () => { if (_navPushed) history.back(); else navigate('detail'); });
 $('r-prev-ch').addEventListener('click', () => goReaderChapter(+1));
 $('r-next-ch').addEventListener('click', () => goReaderChapter(-1));
+
+/* ─── Tombol reload chapter: muat ulang tanpa kehilangan posisi baca ─── */
+$('r-reload').addEventListener('click', () => {
+  let slug = _curChapters[_rChIdx]?.slug;
+  if (!slug) {
+    const m = location.pathname.match(/^\/chapter\/([^/]+)$/);
+    slug = m?.[1];
+  }
+  if (!slug) { showToast('Chapter belum dimuat', 2000); return; }
+  // Catat halaman yang sedang dibaca (berdasar posisi scroll)
+  const pages = document.querySelectorAll('#reader-pages .r-page');
+  let idx = 0;
+  pages.forEach((p, i) => {
+    if (p.getBoundingClientRect().top <= 90) idx = i; // 90px = di bawah toolbar
+  });
+  showToast('🔄 Memuat ulang chapter...', 1500);
+  openReader(slug, _curTitle, { isReload: true, keepPageIdx: pages.length ? idx : null });
+});
 $('rs-dl')?.addEventListener('click', () => {
   const ch = _curChapters[_rChIdx];
   if (!ch?.slug) { showToast('Chapter belum dimuat', 2000); return; }
