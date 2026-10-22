@@ -71,6 +71,7 @@ let prevPg = 'home';
 
 let expSort = 'update', expType = '', expStatus = '';
 let topType = '';
+let allType = '';
 
 let slideIdx = 0, slideN = 0, slideTimer = null;
 
@@ -908,7 +909,9 @@ $$('#sch-days .filt').forEach(b => b.addEventListener('click', () => {
 ───────────────────────────────────────────────────── */
 async function loadAllSeries(pg = 1) {
   gridLoading('all-grid');
-  const d = await api(`${PROXY}/api/list?page=${pg}&order=update`);
+  let url = `${PROXY}/api/list?page=${pg}&order=update`;
+  if (allType) url += `&type=${encodeURIComponent(allType)}`;
+  const d = await api(url);
   if (!d) {
     $('all-grid').innerHTML = retryBox('Daftar seri gagal dimuat.');
     $('all-pager').innerHTML = '';
@@ -919,9 +922,9 @@ async function loadAllSeries(pg = 1) {
 }
 window.loadAllSeries = loadAllSeries;
 
-$$('#pg-allseries .filt').forEach(b => b.addEventListener('click', () => {
-  $$('#pg-allseries .filt').forEach(x => x.classList.remove('active'));
-  b.classList.add('active'); loadAllSeries(1);
+$$('#pg-allseries .filt[data-t]').forEach(b => b.addEventListener('click', () => {
+  $$('#pg-allseries .filt[data-t]').forEach(x => x.classList.remove('active'));
+  b.classList.add('active'); allType = b.dataset.t; loadAllSeries(1);
 }));
 
 /* ─────────────────────────────────────────────────────
