@@ -209,6 +209,7 @@ function mapItem(m) {
     img: coverOf(m),
     score: scoreOf(m),
     type: typeOf(m),
+    status: STATUS_MAP[m.status] || '',
     latestChapter: m.latest_chapter_number != null ? `Ch. ${m.latest_chapter_number}` : ''
   };
 }
@@ -343,7 +344,7 @@ app.get('/api/list', async (req, res) => {
       totalPages = r.meta?.total_page || 1;
     } else {
       // 'update' (default) → newest; 'popular' + type → top rated within format
-      const sort = order === 'popular' ? 'rating' : 'latest';
+      const sort = (order === 'popular' || order === 'rating') ? 'rating' : 'latest';
       let q = `/manga/list?page=${page}&page_size=24&sort=${sort}&sort_order=desc`;
       if (fmt) q += `&format=${encodeURIComponent(fmt)}`;
       if (genre) q += `&genre_include=${encodeURIComponent(genre)}&genre_include_mode=and`;
