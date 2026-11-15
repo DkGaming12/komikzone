@@ -339,6 +339,17 @@ function paginate(pagerId, curPage, total, fnName) {
 
   p.innerHTML = parts.join('');
   p.classList.add('ready');
+
+  // Geser grid dari arah pindah halaman (diatur handler klik pagination)
+  if (window._pgDir) {
+    const grid = document.getElementById(pagerId.replace('-pager', '-grid'));
+    if (grid) {
+      grid.classList.remove('pg-slide-r', 'pg-slide-l');
+      void grid.offsetWidth; // restart animasi
+      grid.classList.add(window._pgDir === 'r' ? 'pg-slide-r' : 'pg-slide-l');
+    }
+    window._pgDir = null;
+  }
 }
 
 // Delegated pagination click
@@ -347,7 +358,23 @@ document.addEventListener('click', e => {
   if (!btn) return;
   const pg = parseInt(btn.dataset.pg);
   const fn = window[btn.dataset.fn];
-  if (pg >= 1 && typeof fn === 'function') fn(pg);
+  if (!(pg >= 1) || typeof fn !== 'function') return;
+  // Arah pindah halaman harus jelas: halaman baru selalu dimulai dari atas
+  // grid (sebelumnya viewport tetap di bawah, dekat pager, sehingga user
+  // mendarat di posisi acak) + grid bergeser dari arah yang benar
+  // (maju = dari kanan, mundur = dari kiri).
+  const pager = btn.closest('.pager');
+  const grid = pager && document.getElementById(pager.id.replace('-pager', '-grid'));
+  const curBtn = pager?.querySelector('.pg-btn.on');
+  const curPgNum = curBtn ? parseInt(curBtn.textContent) : NaN;
+  // Arah dipakai paginate() untuk menganimasikan grid SETELAH konten baru
+  // selesai dirender (kelas digeser di paginate, bukan di sini).
+  window._pgDir = (!isNaN(curPgNum) && pg !== curPgNum) ? (pg > curPgNum ? 'r' : 'l') : null;
+  fn(pg);
+  if (grid) {
+    const y = grid.getBoundingClientRect().top + window.scrollY - 76;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+  }
 });
 
 /* ─────────────────────────────────────────────────────

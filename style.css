@@ -666,6 +666,40 @@ body::before {
   }
 }
 
+/* Arah pindah halaman pada pagination: maju masuk dari kanan,
+   mundur masuk dari kiri — biar user tahu dia bergerak ke mana */
+.pg-slide-r {
+  animation: pgFromRight .28s cubic-bezier(.4, 0, .2, 1);
+}
+
+.pg-slide-l {
+  animation: pgFromLeft .28s cubic-bezier(.4, 0, .2, 1);
+}
+
+@keyframes pgFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(22px)
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0)
+  }
+}
+
+@keyframes pgFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-22px)
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0)
+  }
+}
+
 /* ============ FEATURED SLIDER ============ */
 .featured {
   position: relative;
