@@ -228,94 +228,122 @@ function mapChapter(c) {
   };
 }
 
-/** Chapter list of a manga (single page, big page_size covers most series).
-    The list endpoint has 502'd persistently since Shinigami's migration,
-    so try it with a short timeout and NO retry — if it ever hangs instead
-    of failing fast, it must not stall callers (the reader especially). */
-function fetchChapters(mangaId, walkBudgetMs = 8000) {
-  return getJSON(
-    `/chapter/${mangaId}/list?page=1&page_size=500&sort_by=chapter_number&sort_order=desc`,
-    300_000, { timeout: 6000, retries: 0 }
-  ).then(r => (r.data || []).map(mapChapter)).catch(() => fetchChaptersWalk(mangaId, walkBudgetMs));
+/** Chapter list of a manga.
+    Since Shinigami's Nov 2026 migration their chapter endpoints fail in
+    patches, so combine every source that works and union the results:
+      1. the single-shot list (page_size=500) — the healthy-upstream path;
+      2. paged list @24 desc, pages 1–3 — page 1 usually answers even now
+         (likely edge-cached upstream) while other sizes/pages 502; its
+         rows double as resume anchors for the walk;
+      3. the prev_chapter_id walk from the latest chapter.
+    Individual chapter records also 502 in clusters: a broken record used
+    to kill the whole list (the walk died at the chain head when the
+    LATEST chapter was the broken one — "Tidak Ada Chapter" even though
+    90+ chapters were fine). Now, when a walk breaks at a dead record it
+    resumes from the next anchor below the break (a list row), so one
+    dead record hides only itself. Walks are time-boxed and resumable
+    via chapterWalkCache. All list attempts use a short timeout and no
+    retry so a dead variant cannot stall callers (the reader especially).
+    Remove once /chapter/:id/list works reliably again. */
+const chapterWalkCache = new Map(); // mangaId -> { map: Map<slug,{n,e}>, complete, dead: Map<slug,ts> }
+
+function walkSnapshot(mangaId) {
+  const entry = chapterWalkCache.get(mangaId);
+  if (!entry) return [];
+  return [...entry.map.values()]
+    .sort((a, b) => (b.n ?? 0) - (a.n ?? 0))
+    .map(x => x.e);
 }
 
-/* Fallback while Shinigami's chapter-list endpoint is down (persistent 502
-   since their Nov 2026 domain migration): rebuild the list by walking the
-   prev_chapter_id chain from the latest chapter, newest-first. A few
-   individual chapter records 502 as well and break the chain there —
-   nothing can stitch past them (ids are opaque UUIDs), so the list ends
-   at the first broken record. Walks are time-boxed and RESUMABLE: the
-   assembled list is kept per manga and later calls keep deepening it
-   toward chapter 1 (per-chapter responses are cached 1 hr by getJSON).
-   Remove once /chapter/:id/list works again. */
-const chapterWalkCache = new Map(); // mangaId -> { latestId, chapters, complete }
+async function fetchChapters(mangaId, walkBudgetMs = 8000) {
+  const full = await getJSON(
+    `/chapter/${mangaId}/list?page=1&page_size=500&sort_by=chapter_number&sort_order=desc`,
+    300_000, { timeout: 6000, retries: 0 }
+  ).catch(() => null);
+  if (full?.data?.length) return full.data.map(mapChapter);
 
-async function fetchChaptersWalk(mangaId, budgetMs = 8000) {
+  const seedPages = await Promise.all([1, 2, 3].map(p =>
+    getJSON(
+      `/chapter/${mangaId}/list?page=${p}&page_size=24&sort_by=chapter_number&sort_order=desc`,
+      300_000, { timeout: 6000, retries: 0 }
+    ).catch(() => null)
+  ));
+  const seeds = seedPages.flatMap(r => r?.data || []);
+  return fetchChaptersWalk(mangaId, walkBudgetMs, seeds);
+}
+
+async function fetchChaptersWalk(mangaId, budgetMs = 8000, seeds = []) {
   try {
     const detail = await getJSON(`/manga/detail/${mangaId}`);
     const m = detail.data;
-    if (!m?.latest_chapter_id) return [];
+    if (!m?.latest_chapter_id) return walkSnapshot(mangaId);
     if (chapterWalkCache.size > 100) chapterWalkCache.clear();
     let entry = chapterWalkCache.get(mangaId);
     if (!entry) {
-      entry = { latestId: null, chapters: [], complete: false };
+      entry = { map: new Map(), complete: false, dead: new Map() };
       chapterWalkCache.set(mangaId, entry);
     }
-    const deadline = Date.now() + budgetMs;
+    if (!entry.dead) entry.dead = new Map();
+    // Records whose detail fetch just failed are skipped for a while:
+    // failures are not cached by getJSON, so without this every call
+    // would re-pay the failure cost at the same broken records and the
+    // walk would never get past them within its budget.
+    const isDead = (id) => {
+      const ts = entry.dead.get(id);
+      return ts != null && Date.now() - ts < 600_000;
+    };
     const toEntry = (d) => ({
       title: `Chapter ${d.chapter_number}`,
       slug: d.chapter_id,
       date: relTime(d.release_date || d.created_at)
     });
 
-    // New chapter(s) since the last walk: prepend the fresh segment.
-    if (entry.latestId !== m.latest_chapter_id) {
-      const known = new Set(entry.chapters.map(c => c.slug));
-      const baseChapters = entry.chapters;
-      const seg = [];
-      const segSeen = new Set();
-      let id = m.latest_chapter_id;
-      while (id && !known.has(id) && !segSeen.has(id) && seg.length < 100 && Date.now() < deadline) {
-        segSeen.add(id);
-        const r = await getJSON(`/chapter/detail/${id}`, 3_600_000).catch(() => null);
-        if (!r?.data) break;
-        seg.push(toEntry(r.data));
-        // Publish progress as we go: a reader request racing this walk
-        // can already use the partial (newest-first) list.
-        entry.chapters = [...seg, ...baseChapters];
-        id = r.data.prev_chapter_id;
-      }
-      if (seg.length) {
-        entry.chapters = [...seg, ...baseChapters];
-        entry.latestId = m.latest_chapter_id;
-        if (!id) entry.complete = true; // walked all the way to chapter 1
-      } else if (!entry.chapters.length) {
-        return [];
+    // Seed rows are real chapters even when their detail record is dead —
+    // list them; the reader will surface the dead ones individually.
+    for (const s of seeds) {
+      if (s?.chapter_id && !entry.map.has(s.chapter_id)) {
+        entry.map.set(s.chapter_id, {
+          n: s.chapter_number,
+          e: { title: `Chapter ${s.chapter_number}`, slug: s.chapter_id, date: relTime(s.release_date || s.created_at) }
+        });
       }
     }
 
-    // Deepen toward chapter 1 until the time budget runs out; the next
-    // call resumes from the oldest chapter assembled so far.
-    if (!entry.complete && entry.chapters.length) {
-      const seen = new Set(entry.chapters.map(c => c.slug));
-      const last = await getJSON(
-        `/chapter/detail/${entry.chapters[entry.chapters.length - 1].slug}`,
-        3_600_000
-      ).catch(() => null);
-      let nextId = last?.data?.prev_chapter_id || null;
-      if (!nextId) entry.complete = true;
-      while (nextId && !seen.has(nextId) && entry.chapters.length < 1000 && Date.now() < deadline) {
-        seen.add(nextId);
-        const r = await getJSON(`/chapter/detail/${nextId}`, 3_600_000).catch(() => null);
-        if (!r?.data) break; // broken record upstream — chain ends here
-        entry.chapters.push(toEntry(r.data));
-        nextId = r.data.prev_chapter_id;
-        if (!nextId) entry.complete = true;
+    // Anchors for downward walks, newest first: the latest chapter, the
+    // seed rows, and the oldest chapter assembled so far (resuming).
+    const anchors = [];
+    const anchorSeen = new Set();
+    const addAnchor = (id) => { if (id && !anchorSeen.has(id)) { anchorSeen.add(id); anchors.push(id); } };
+    addAnchor(m.latest_chapter_id);
+    [...seeds]
+      .sort((a, b) => (b.chapter_number ?? 0) - (a.chapter_number ?? 0))
+      .forEach(s => addAnchor(s.chapter_id));
+    if (entry.map.size) {
+      const oldest = [...entry.map.values()].sort((a, b) => (a.n ?? 0) - (b.n ?? 0))[0];
+      if (oldest) addAnchor(oldest.e.slug);
+    }
+
+    const deadline = Date.now() + budgetMs;
+    for (const anchorId of anchors) {
+      if (entry.complete || Date.now() >= deadline) break;
+      if (isDead(anchorId)) continue;
+      let id = anchorId;
+      const seenLocal = new Set();
+      while (id && !seenLocal.has(id) && Date.now() < deadline) {
+        seenLocal.add(id);
+        if (isDead(id)) break;
+        const r = await getJSON(`/chapter/detail/${id}`, 3_600_000, { timeout: 6000, retries: 0 }).catch(() => null);
+        if (!r?.data) { entry.dead.set(id, Date.now()); break; } // broken record — the next anchor resumes below it
+        const d = r.data;
+        entry.map.set(d.chapter_id, { n: d.chapter_number, e: toEntry(d) });
+        if (!d.prev_chapter_id) { entry.complete = true; break; }
+        id = d.prev_chapter_id;
+        if (entry.map.has(id)) break; // reached territory already assembled
       }
     }
-    return entry.chapters;
+    return walkSnapshot(mangaId);
   } catch {
-    return [];
+    return walkSnapshot(mangaId);
   }
 }
 
@@ -736,8 +764,7 @@ app.get('/api/chapter', async (req, res) => {
       getJSON(`/manga/detail/${d.manga_id}`).catch(() => null)
     ]);
     const chapters = chaptersOrNull
-      || chapterWalkCache.get(d.manga_id)?.chapters
-      || [];
+      || walkSnapshot(d.manga_id);
     const md = detailR?.data;
 
     res.json({
