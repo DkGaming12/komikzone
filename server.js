@@ -44,18 +44,23 @@ const API = 'https://api.shngm.io/v1';
 const cache = new Map();
 const MAX_CACHE = 200;
 
-async function getJSON(pathAndQuery, ttl = 300_000) {
+async function getJSON(pathAndQuery, ttl = 300_000, opts = {}) {
   const url = `${API}${pathAndQuery}`;
   const hit = cache.get(url);
   if (hit && Date.now() - hit.ts < ttl) return hit.json;
 
-  // Global fetch (Node 18+) with a real timeout — retry once on network failure
+  // Global fetch (Node 18+) with a real timeout — retry once on network
+  // failure by default; callers on a known-broken/slow path can shorten
+  // the timeout and skip the retry via opts so a dead endpoint cannot
+  // stall the whole response.
+  const timeoutMs = opts.timeout ?? 15000;
+  const attempts = (opts.retries ?? 1) + 1;
   let lastErr;
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
     try {
       const r = await fetch(url, {
         headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(15000)
+        signal: AbortSignal.timeout(timeoutMs)
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const json = await r.json();
@@ -65,7 +70,7 @@ async function getJSON(pathAndQuery, ttl = 300_000) {
       return json;
     } catch (e) {
       lastErr = e;
-      if (attempt === 0) await new Promise(res => setTimeout(res, 800));
+      if (attempt < attempts - 1) await new Promise(res => setTimeout(res, 800));
     }
   }
   throw new Error(`Gagal mengambil ${url} (${lastErr?.message || 'network error'})`);
@@ -223,12 +228,15 @@ function mapChapter(c) {
   };
 }
 
-/** Chapter list of a manga (single page, big page_size covers most series) */
-function fetchChapters(mangaId) {
+/** Chapter list of a manga (single page, big page_size covers most series).
+    The list endpoint has 502'd persistently since Shinigami's migration,
+    so try it with a short timeout and NO retry — if it ever hangs instead
+    of failing fast, it must not stall callers (the reader especially). */
+function fetchChapters(mangaId, walkBudgetMs = 8000) {
   return getJSON(
     `/chapter/${mangaId}/list?page=1&page_size=500&sort_by=chapter_number&sort_order=desc`,
-    300_000
-  ).then(r => (r.data || []).map(mapChapter)).catch(() => fetchChaptersWalk(mangaId));
+    300_000, { timeout: 6000, retries: 0 }
+  ).then(r => (r.data || []).map(mapChapter)).catch(() => fetchChaptersWalk(mangaId, walkBudgetMs));
 }
 
 /* Fallback while Shinigami's chapter-list endpoint is down (persistent 502
@@ -242,7 +250,7 @@ function fetchChapters(mangaId) {
    Remove once /chapter/:id/list works again. */
 const chapterWalkCache = new Map(); // mangaId -> { latestId, chapters, complete }
 
-async function fetchChaptersWalk(mangaId) {
+async function fetchChaptersWalk(mangaId, budgetMs = 8000) {
   try {
     const detail = await getJSON(`/manga/detail/${mangaId}`);
     const m = detail.data;
@@ -253,7 +261,7 @@ async function fetchChaptersWalk(mangaId) {
       entry = { latestId: null, chapters: [], complete: false };
       chapterWalkCache.set(mangaId, entry);
     }
-    const deadline = Date.now() + 8000;
+    const deadline = Date.now() + budgetMs;
     const toEntry = (d) => ({
       title: `Chapter ${d.chapter_number}`,
       slug: d.chapter_id,
@@ -263,6 +271,7 @@ async function fetchChaptersWalk(mangaId) {
     // New chapter(s) since the last walk: prepend the fresh segment.
     if (entry.latestId !== m.latest_chapter_id) {
       const known = new Set(entry.chapters.map(c => c.slug));
+      const baseChapters = entry.chapters;
       const seg = [];
       const segSeen = new Set();
       let id = m.latest_chapter_id;
@@ -271,10 +280,13 @@ async function fetchChaptersWalk(mangaId) {
         const r = await getJSON(`/chapter/detail/${id}`, 3_600_000).catch(() => null);
         if (!r?.data) break;
         seg.push(toEntry(r.data));
+        // Publish progress as we go: a reader request racing this walk
+        // can already use the partial (newest-first) list.
+        entry.chapters = [...seg, ...baseChapters];
         id = r.data.prev_chapter_id;
       }
       if (seg.length) {
-        entry.chapters = [...seg, ...entry.chapters];
+        entry.chapters = [...seg, ...baseChapters];
         entry.latestId = m.latest_chapter_id;
         if (!id) entry.complete = true; // walked all the way to chapter 1
       } else if (!entry.chapters.length) {
@@ -307,13 +319,17 @@ async function fetchChaptersWalk(mangaId) {
   }
 }
 
-// Global Rate Limiter for all APIs (150 requests per 10 minutes)
+// Global Rate Limiter for all APIs (150 requests per 10 minutes).
+// The online-presence endpoints are exempt: the client heartbeats
+// /api/online/ping every ~25s, which alone would eat a sixth of the
+// budget and could 429 a reading session into the reader error screen.
 const globalLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 150,
   message: { error: 'Terlalu banyak permintaan. Silakan tunggu beberapa saat.' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.path.startsWith('/api/online/'),
 });
 
 // Strict Rate Limiter for search to prevent database scraping (30 requests per minute)
@@ -678,11 +694,26 @@ app.get('/api/chapter', async (req, res) => {
     const images = d.chapter.data.map(f => base + f);
 
     // Include the manga's chapter list + cover so the reader can navigate
-    // (and recover context when opened directly from history/cards)
-    const [chapters, detailR] = await Promise.all([
-      fetchChapters(d.manga_id),
+    // (and recover context when opened directly from history/cards).
+    // The images must NEVER wait on the chapter list: since Shinigami's
+    // migration the list is rebuilt by walking chapter records one by one,
+    // which on a cold instance takes seconds — long enough that the
+    // reader used to time out and show "Gambar tidak tersedia" even
+    // though the chapter itself was fine. Cap the wait at 5s and fall
+    // back to whatever the walk has assembled so far (newest-first, so
+    // the current chapter is in it); the walk keeps running in the
+    // background and completes the cache for the next call.
+    const chaptersPromise = fetchChapters(d.manga_id, 4000).catch(() => null);
+    const [chaptersOrNull, detailR] = await Promise.all([
+      Promise.race([
+        chaptersPromise,
+        new Promise(res => setTimeout(() => res(null), 5000))
+      ]),
       getJSON(`/manga/detail/${d.manga_id}`).catch(() => null)
     ]);
+    const chapters = chaptersOrNull
+      || chapterWalkCache.get(d.manga_id)?.chapters
+      || [];
     const md = detailR?.data;
 
     res.json({

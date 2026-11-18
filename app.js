@@ -10,13 +10,13 @@ const PROXY = isLocal ? 'http://localhost:3001' : '';
 const _apiCache = new Map();
 const _inflight = new Map();
 
-async function api(url) {
+async function api(url, timeoutMs = 25000) {
   if (_apiCache.has(url)) return _apiCache.get(url);
   if (_inflight.has(url)) return _inflight.get(url);
 
   const p = (async () => {
     try {
-      const r = await fetch(url, { signal: AbortSignal.timeout(25000) });
+      const r = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const d = await r.json();
       _apiCache.set(url, d);
@@ -1333,8 +1333,9 @@ async function openReader(chSlug, title, opts = {}) {
   // If _curChapters is empty (opened from history/cards without visiting detail),
   // the chapter response carries the manga's chapter list + metadata — no guessing.
   let chData = null;
+  const chapterApiUrl = `${PROXY}/api/chapter?slug=${encodeURIComponent(chSlug)}`;
   if (!_curChapters.length && chSlug) {
-    chData = await api(`${PROXY}/api/chapter?slug=${encodeURIComponent(chSlug)}`);
+    chData = await api(chapterApiUrl, 60000);
     if (chData?.chapters?.length) {
       _curChapters = chData.chapters.map(c => ({ slug: c.slug, title: c.title, date: c.date }));
       _curMangaSlug = chData.mangaSlug || '';
@@ -1365,7 +1366,14 @@ async function openReader(chSlug, title, opts = {}) {
 
   pages.innerHTML = SKEL_READER;
 
-  const d = chData || await api(`${PROXY}/api/chapter?slug=${encodeURIComponent(chSlug)}`);
+  let d = chData || await api(chapterApiUrl, 60000);
+  if (!d) {
+    // One retry after a short pause: upstream has been flaky since
+    // Shinigami's migration — a single transient 502/timeout must not
+    // dead-end the reader at "Gambar tidak tersedia".
+    await new Promise(r => setTimeout(r, 1500));
+    d = await api(chapterApiUrl, 60000);
+  }
   let imgs = d?.images || [];
 
   // Prioritaskan versi offline (IndexedDB) jika chapter ini sudah didownload
@@ -2078,7 +2086,7 @@ async function downloadChapter(manga, ch, btn) {
   const setBtn = (html, cls) => { if (btn) { btn.innerHTML = html; btn.className = 'ch-dl-btn ' + (cls || ''); } };
   try {
     setBtn('⏳ 0%', 'busy');
-    const d = await api(`${PROXY}/api/chapter?slug=${encodeURIComponent(ch.slug)}`);
+    const d = await api(`${PROXY}/api/chapter?slug=${encodeURIComponent(ch.slug)}`, 60000);
     const imgs = d?.images || [];
     if (!imgs.length) throw new Error('gambar tidak ditemukan');
     const blobs = [];
