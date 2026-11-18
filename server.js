@@ -343,6 +343,30 @@ const searchLimiter = rateLimit({
 
 app.use('/api/', globalLimiter);
 
+/* ── Edge (CDN) caching for read-only API responses ─────────────────
+   First loads are slow: since Shinigami's migration, chapter lists are
+   rebuilt by walking their records one by one, and every visitor on a
+   cold function instance used to pay that full cost — phone browsers
+   timed out and showed the reader error screen even though the site
+   was healthy. Let Vercel's edge serve repeats instead: chapter
+   payloads are immutable, and manga/home/list data tolerates a couple
+   of minutes of staleness (stale-while-revalidate keeps it fresh in
+   the background). */
+const CDN_CACHE = [
+  [/^\/api\/chapter$/, 'public, s-maxage=3600, stale-while-revalidate=86400'],
+  [/^\/api\/manga\//, 'public, s-maxage=120, stale-while-revalidate=600'],
+  [/^\/api\/home$/, 'public, s-maxage=60, stale-while-revalidate=300'],
+  [/^\/api\/(list|top|schedule|genres|genre\/|search)/, 'public, s-maxage=120, stale-while-revalidate=600'],
+];
+app.use((req, res, next) => {
+  if (req.method === 'GET') {
+    for (const [re, val] of CDN_CACHE) {
+      if (re.test(req.path)) { res.set('Cache-Control', val); break; }
+    }
+  }
+  next();
+});
+
 /* ── /api/home ───────────────────────────────────────── */
 app.get('/api/home', async (req, res) => {
   try {
