@@ -232,9 +232,10 @@ function mapChapter(c) {
     Since Shinigami's Nov 2026 migration their chapter endpoints fail in
     patches, so combine every source that works and union the results:
       1. the single-shot list (page_size=500) — the healthy-upstream path;
-      2. paged list @24 desc, pages 1–3 — page 1 usually answers even now
-         (likely edge-cached upstream) while other sizes/pages 502; its
-         rows double as resume anchors for the walk;
+      2. paged list @24 desc, all pages (cap 20) — its health is
+         per-manga: some titles only answer page 1, others answer every
+         page (a complete list with no walk needed); rows also double
+         as resume anchors for the walk;
       3. the prev_chapter_id walk from the latest chapter.
     Individual chapter records also 502 in clusters: a broken record used
     to kill the whole list (the walk died at the chain head when the
@@ -262,13 +263,40 @@ async function fetchChapters(mangaId, walkBudgetMs = 8000) {
   ).catch(() => null);
   if (full?.data?.length) return full.data.map(mapChapter);
 
-  const seedPages = await Promise.all([1, 2, 3].map(p =>
-    getJSON(
-      `/chapter/${mangaId}/list?page=${p}&page_size=24&sort_by=chapter_number&sort_order=desc`,
-      300_000, { timeout: 6000, retries: 0 }
-    ).catch(() => null)
-  ));
-  const seeds = seedPages.flatMap(r => r?.data || []);
+  // The paged list's health is per-manga: for some titles only page 1
+  // answers, for others EVERY page does (then the list alone is the
+  // complete chapter list — no walk needed). Fetch page 1, learn
+  // total_page from its meta, then pull the remaining pages in parallel
+  // (capped at 20 pages ≈ 480 chapters; longer series continue via the
+  // walk + client-side deepening).
+  const page1 = await getJSON(
+    `/chapter/${mangaId}/list?page=1&page_size=24&sort_by=chapter_number&sort_order=desc`,
+    300_000, { timeout: 6000, retries: 0 }
+  ).catch(() => null);
+  let seeds = page1?.data || [];
+  const totalPage = Math.min(page1?.meta?.total_page || 1, 20);
+  if (totalPage > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: totalPage - 1 }, (_, i) => i + 2).map(p =>
+        getJSON(
+          `/chapter/${mangaId}/list?page=${p}&page_size=24&sort_by=chapter_number&sort_order=desc`,
+          300_000, { timeout: 6000, retries: 0 }
+        ).catch(() => null)
+      )
+    );
+    for (const r of rest) if (r?.data?.length) seeds = seeds.concat(r.data);
+  }
+  const byId = new Map();
+  for (const s of seeds) if (s?.chapter_id && !byId.has(s.chapter_id)) byId.set(s.chapter_id, s);
+  seeds = [...byId.values()].sort((a, b) => (b.chapter_number ?? 0) - (a.chapter_number ?? 0));
+
+  // Complete from the list alone? (row count matches upstream's total,
+  // or the rows already reach chapter 1) — return without walking.
+  const totalRecord = page1?.meta?.total_record || 0;
+  const minSeed = seeds.length ? Math.min(...seeds.map(s => s.chapter_number ?? Infinity)) : Infinity;
+  if (seeds.length && (seeds.length >= totalRecord || minSeed <= 1)) {
+    return seeds.map(mapChapter);
+  }
   return fetchChaptersWalk(mangaId, walkBudgetMs, seeds);
 }
 
@@ -382,7 +410,7 @@ app.use('/api/', globalLimiter);
    the background). */
 const CDN_CACHE = [
   [/^\/api\/chapter$/, 'public, s-maxage=3600, stale-while-revalidate=86400'],
-  [/^\/api\/manga\//, 'public, s-maxage=120, stale-while-revalidate=600'],
+  [/^\/api\/manga\//, 'public, s-maxage=300, stale-while-revalidate=1800'],
   [/^\/api\/home$/, 'public, s-maxage=60, stale-while-revalidate=300'],
   [/^\/api\/(list|top|schedule|genres|genre\/|search)/, 'public, s-maxage=120, stale-while-revalidate=600'],
 ];
@@ -709,7 +737,11 @@ app.get('/api/manga/:slug', async (req, res) => {
     const { slug } = req.params;
     const [detailR, chapters] = await Promise.all([
       getJSON(`/manga/detail/${slug}`),
-      fetchChapters(slug)
+      // The detail page tolerates a slower answer better than the reader
+      // does — give the chapter walk a bigger budget so long series get
+      // closer to chapter 1 in a single call. The client additionally
+      // re-fetches quietly in the background to deepen the list further.
+      fetchChapters(slug, 15000)
     ]);
     const m = detailR.data;
     if (!m || !m.title) return res.status(404).json({ error: 'Komik tidak ditemukan.' });

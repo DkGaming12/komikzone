@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kz-cache-v5';
+const CACHE_NAME = 'kz-cache-v6';
 const urlsToCache = [
   '/',
   '/index.html',

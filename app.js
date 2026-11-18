@@ -1182,6 +1182,60 @@ async function openDetail(slug) {
   } catch {}
   // muat rekomendasi komik mirip (berdasar genre)
   loadSimilar(slug, d.genres || []);
+  // Daftar chapter dari server bisa belum lengkap (disusun bertahap dari
+  // sumber yang lagi rusak) — perdalam diam-diam selama halaman ini dibuka.
+  deepenDetailChapters(slug, d);
+}
+
+/* Perdalam daftar chapter di latar belakang: selama halaman detail komik
+   ini masih dibuka dan chapter paling awal belum ketemu, ambil ulang data
+   komik beberapa kali (server melanjutkan penyusunan daftarnya di antara
+   panggilan) lalu gabungkan + gambar ulang daftarnya di tempat. Berhenti
+   saat sudah sampai chapter 1, saat tidak ada kemajuan, atau saat
+   pengunjung pindah halaman. */
+async function deepenDetailChapters(slug, d) {
+  const numOf = (c) => {
+    const m = /(\d+(?:\.\d+)?)/.exec(c?.title || '');
+    return m ? parseFloat(m[1]) : null;
+  };
+  let stale = 0;
+  for (let attempt = 1; attempt <= 6; attempt++) {
+    const nums = _curChapters.map(numOf).filter(n => n != null);
+    const minN = nums.length ? Math.min(...nums) : Infinity;
+    if (minN <= 1) return;
+    await new Promise(r => setTimeout(r, 5000));
+    if (_curMangaSlug !== slug || !$('ch-list')) return;
+    const nd = await api(`${PROXY}/api/manga/${encodeURIComponent(slug)}?d=${attempt}`, 30000);
+    if (_curMangaSlug !== slug || !$('ch-list')) return;
+    if (!nd?.chapters?.length) { if (++stale >= 2) return; continue; }
+    const merged = new Map();
+    for (const c of nd.chapters) merged.set(c.slug, { slug: c.slug, title: c.title, date: c.date });
+    for (const c of _curChapters) if (!merged.has(c.slug)) merged.set(c.slug, c);
+    const arr = [...merged.values()].sort((a, b) => (numOf(b) ?? 0) - (numOf(a) ?? 0));
+    if (arr.length <= _curChapters.length) { if (++stale >= 2) return; continue; }
+    stale = 0;
+    _curChapters = arr;
+    $('ch-list').innerHTML = buildChapterList(_curChapters, { slug, title: d.title, img: d.img });
+    markDownloadedButtons();
+    // Perbaiki tombol baca + angka statistik mengikuti daftar yang membesar
+    const readBtn = $('d-read-btn'), latestBtn = $('d-latest-btn');
+    if (readBtn && (readBtn.disabled || (readBtn.textContent || '').includes('Baca Chapter Awal'))) {
+      readBtn.disabled = false;
+      readBtn.style.opacity = '';
+      readBtn.textContent = '📖 Baca Chapter Awal';
+      readBtn.onclick = () => openReader(_curChapters[_curChapters.length - 1].slug, d.title);
+    }
+    if (latestBtn) {
+      latestBtn.style.display = '';
+      latestBtn.onclick = () => openReader(_curChapters[0].slug, d.title);
+    }
+    document.querySelectorAll('#detail-root .d-stat').forEach(st => {
+      if ((st.querySelector('.d-lbl-s')?.textContent || '') === 'Chapter') {
+        const v = st.querySelector('.d-val');
+        if (v) v.textContent = _curChapters.length;
+      }
+    });
+  }
 }
 
 // Rekomendasi: komik dengan genre sama, urut rating tertinggi
