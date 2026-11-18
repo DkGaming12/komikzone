@@ -228,7 +228,83 @@ function fetchChapters(mangaId) {
   return getJSON(
     `/chapter/${mangaId}/list?page=1&page_size=500&sort_by=chapter_number&sort_order=desc`,
     300_000
-  ).then(r => (r.data || []).map(mapChapter)).catch(() => []);
+  ).then(r => (r.data || []).map(mapChapter)).catch(() => fetchChaptersWalk(mangaId));
+}
+
+/* Fallback while Shinigami's chapter-list endpoint is down (persistent 502
+   since their Nov 2026 domain migration): rebuild the list by walking the
+   prev_chapter_id chain from the latest chapter, newest-first. A few
+   individual chapter records 502 as well and break the chain there —
+   nothing can stitch past them (ids are opaque UUIDs), so the list ends
+   at the first broken record. Walks are time-boxed and RESUMABLE: the
+   assembled list is kept per manga and later calls keep deepening it
+   toward chapter 1 (per-chapter responses are cached 1 hr by getJSON).
+   Remove once /chapter/:id/list works again. */
+const chapterWalkCache = new Map(); // mangaId -> { latestId, chapters, complete }
+
+async function fetchChaptersWalk(mangaId) {
+  try {
+    const detail = await getJSON(`/manga/detail/${mangaId}`);
+    const m = detail.data;
+    if (!m?.latest_chapter_id) return [];
+    if (chapterWalkCache.size > 100) chapterWalkCache.clear();
+    let entry = chapterWalkCache.get(mangaId);
+    if (!entry) {
+      entry = { latestId: null, chapters: [], complete: false };
+      chapterWalkCache.set(mangaId, entry);
+    }
+    const deadline = Date.now() + 8000;
+    const toEntry = (d) => ({
+      title: `Chapter ${d.chapter_number}`,
+      slug: d.chapter_id,
+      date: relTime(d.release_date || d.created_at)
+    });
+
+    // New chapter(s) since the last walk: prepend the fresh segment.
+    if (entry.latestId !== m.latest_chapter_id) {
+      const known = new Set(entry.chapters.map(c => c.slug));
+      const seg = [];
+      const segSeen = new Set();
+      let id = m.latest_chapter_id;
+      while (id && !known.has(id) && !segSeen.has(id) && seg.length < 100 && Date.now() < deadline) {
+        segSeen.add(id);
+        const r = await getJSON(`/chapter/detail/${id}`, 3_600_000).catch(() => null);
+        if (!r?.data) break;
+        seg.push(toEntry(r.data));
+        id = r.data.prev_chapter_id;
+      }
+      if (seg.length) {
+        entry.chapters = [...seg, ...entry.chapters];
+        entry.latestId = m.latest_chapter_id;
+        if (!id) entry.complete = true; // walked all the way to chapter 1
+      } else if (!entry.chapters.length) {
+        return [];
+      }
+    }
+
+    // Deepen toward chapter 1 until the time budget runs out; the next
+    // call resumes from the oldest chapter assembled so far.
+    if (!entry.complete && entry.chapters.length) {
+      const seen = new Set(entry.chapters.map(c => c.slug));
+      const last = await getJSON(
+        `/chapter/detail/${entry.chapters[entry.chapters.length - 1].slug}`,
+        3_600_000
+      ).catch(() => null);
+      let nextId = last?.data?.prev_chapter_id || null;
+      if (!nextId) entry.complete = true;
+      while (nextId && !seen.has(nextId) && entry.chapters.length < 1000 && Date.now() < deadline) {
+        seen.add(nextId);
+        const r = await getJSON(`/chapter/detail/${nextId}`, 3_600_000).catch(() => null);
+        if (!r?.data) break; // broken record upstream — chain ends here
+        entry.chapters.push(toEntry(r.data));
+        nextId = r.data.prev_chapter_id;
+        if (!nextId) entry.complete = true;
+      }
+    }
+    return entry.chapters;
+  } catch {
+    return [];
+  }
 }
 
 // Global Rate Limiter for all APIs (150 requests per 10 minutes)
@@ -254,17 +330,21 @@ app.use('/api/', globalLimiter);
 /* ── /api/home ───────────────────────────────────────── */
 app.get('/api/home', async (req, res) => {
   try {
+    // Each sub-call is fault-tolerant: since Shinigami's Nov 2026 migration
+    // some endpoints 502 (e.g. /manga/top?filter=weekly) and one dead call
+    // must not blank the whole homepage. Weekly top is substituted with the
+    // daily chart until the weekly endpoint recovers.
     const [rec, topDaily, topWeekly, topRated, updates, newProj] = await Promise.all([
-      getJSON('/manga/list?page=1&page_size=10&is_recommended=true&sort=rating&sort_order=desc'),
-      getJSON('/manga/top?filter=daily&page=1&page_size=12'),
-      getJSON('/manga/top?filter=weekly&page=1&page_size=10'),
-      getJSON('/manga/list?page=1&page_size=10&sort=rating&sort_order=desc'),
-      getJSON('/manga/list?page=1&page_size=16&type=project&is_update=true&sort=latest&sort_order=desc'),
-      getJSON('/manga/list?page=1&page_size=6&type=project&sort=latest&sort_order=desc')
+      getJSON('/manga/list?page=1&page_size=10&is_recommended=true&sort=rating&sort_order=desc').catch(() => null),
+      getJSON('/manga/top?filter=daily&page=1&page_size=12').catch(() => null),
+      getJSON('/manga/top?filter=daily&page=1&page_size=10').catch(() => null),
+      getJSON('/manga/list?page=1&page_size=10&sort=rating&sort_order=desc').catch(() => null),
+      getJSON('/manga/list?page=1&page_size=16&type=project&is_update=true&sort=latest&sort_order=desc').catch(() => null),
+      getJSON('/manga/list?page=1&page_size=6&type=project&sort=latest&sort_order=desc').catch(() => null)
     ]);
 
     // Featured hero slider — recommended titles with full metadata
-    const featured = (rec.data || []).map(m => ({
+    const featured = (rec?.data || []).map(m => ({
       title: m.title,
       slug: m.manga_id,
       img: coverOf(m),
@@ -276,7 +356,7 @@ app.get('/api/home', async (req, res) => {
     })).slice(0, 7);
 
     // Latest updates with up to 3 chapter badges each
-    const updatesMapped = (updates.data || []).map(m => ({
+    const updatesMapped = (updates?.data || []).map(m => ({
       title: m.title,
       slug: m.manga_id,
       img: coverOf(m),
@@ -300,13 +380,13 @@ app.get('/api/home', async (req, res) => {
     }));
 
     const popularRanked = {
-      weekly: rankList(topWeekly.data),
-      daily: rankList(topDaily.data),
-      rating: rankList(topRated.data)
+      weekly: rankList(topWeekly?.data),
+      daily: rankList(topDaily?.data),
+      rating: rankList(topRated?.data)
     };
 
     // New series (sidebar)
-    const newSeries = (newProj.data || []).map(m => ({
+    const newSeries = (newProj?.data || []).map(m => ({
       title: m.title,
       slug: m.manga_id,
       img: coverOf(m),
@@ -317,7 +397,7 @@ app.get('/api/home', async (req, res) => {
     res.json({
       featured,
       updates: updatesMapped,
-      popular: (topDaily.data || []).map(mapItem).slice(0, 12),
+      popular: (topDaily?.data || []).map(mapItem).slice(0, 12),
       popularRanked,
       newSeries
     });
@@ -336,17 +416,39 @@ app.get('/api/list', async (req, res) => {
     let items, totalPages;
 
     if (order === 'popular' && !fmt) {
-      // Real view-based popularity: weekly top ranking.
-      // NOTE: /manga/top ignores the format param, so a type filter
-      // falls through to top-rated within that format below.
-      const r = await getJSON(`/manga/top?filter=weekly&page=${page}&page_size=24`);
+      // Real view-based popularity. The weekly chart 502s since Shinigami's
+      // Nov 2026 migration — use the daily chart, fall back to top-rated.
+      let r = await getJSON(`/manga/top?filter=daily&page=${page}&page_size=24`).catch(() => null);
+      if (!r) r = await getJSON(`/manga/list?page=${page}&page_size=24&sort=rating&sort_order=desc`);
       items = (r.data || []).map(mapItem);
       totalPages = r.meta?.total_page || 1;
+    } else if (fmt) {
+      // Upstream's format= filter 502s since the migration — fetch
+      // unfiltered pages and keep only the requested type server-side
+      // (typeOf reads taxonomy/country). Pages are cached upstream-side
+      // of us, so re-scanning from page 1 keeps pagination consistent.
+      const sort = (order === 'popular' || order === 'rating') ? 'rating' : 'latest';
+      const collected = [];
+      let exhausted = false;
+      const lastUp = Math.min(Number(page) * 3, 12);
+      for (let up = 1; up <= lastUp; up++) {
+        let q = `/manga/list?page=${up}&page_size=24&sort=${sort}&sort_order=desc`;
+        if (genre) q += `&genre_include=${encodeURIComponent(genre)}&genre_include_mode=and`;
+        const r = await getJSON(q).catch(() => null);
+        if (!r) break;
+        const data = r.data || [];
+        for (const m of data) {
+          if (typeOf(m).toLowerCase() === fmt) collected.push(m);
+        }
+        if (data.length === 0 || up >= (r.meta?.total_page || up)) { exhausted = true; break; }
+        if (collected.length >= Number(page) * 24) break;
+      }
+      items = collected.slice((Number(page) - 1) * 24, Number(page) * 24).map(mapItem);
+      totalPages = exhausted ? Math.max(1, Math.ceil(collected.length / 24)) : Number(page) + 1;
     } else {
-      // 'update' (default) → newest; 'popular' + type → top rated within format
+      // 'update' (default) → newest; 'popular' + type handled above
       const sort = (order === 'popular' || order === 'rating') ? 'rating' : 'latest';
       let q = `/manga/list?page=${page}&page_size=24&sort=${sort}&sort_order=desc`;
-      if (fmt) q += `&format=${encodeURIComponent(fmt)}`;
       if (genre) q += `&genre_include=${encodeURIComponent(genre)}&genre_include_mode=and`;
       const r = await getJSON(q);
       items = (r.data || []).map(mapItem);
@@ -375,12 +477,16 @@ app.get('/api/list', async (req, res) => {
 const WD_MAP = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
 app.get('/api/schedule', async (req, res) => {
   try {
-    const pages = await Promise.all([1, 2, 3].map(p =>
-      getJSON(`/manga/list?page=${p}&page_size=40&type=project&is_update=true&sort=latest&sort_order=desc`, 1_800_000)
+    // page_size=40 502s since Shinigami's Nov 2026 migration — use 24 and
+    // one extra page; a failed page must not kill the whole schedule.
+    const pages = await Promise.all([1, 2, 3, 4].map(p =>
+      getJSON(`/manga/list?page=${p}&page_size=24&type=project&is_update=true&sort=latest&sort_order=desc`, 1_800_000)
+        .catch(() => null)
     ));
     const days = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] };
     const seen = new Set();
     for (const pg of pages) {
+      if (!pg) continue;
       for (const m of (pg.data || [])) {
         if (!m.manga_id || seen.has(m.manga_id)) continue;
         seen.add(m.manga_id);
@@ -470,10 +576,17 @@ app.get('/api/notif-check', async (req, res) => {
     if (!slugs.length) return res.json({ items: [] });
     const items = await Promise.all(slugs.map(async (slug) => {
       try {
-        const chapters = await fetchChapters(slug);
-        const c = chapters[0];
-        return c
-          ? { slug, chSlug: c.slug, chTitle: c.title, date: c.date }
+        // Only the latest chapter is needed here — read it straight from
+        // the manga detail instead of fetching the whole chapter list.
+        const d = await getJSON(`/manga/detail/${slug}`);
+        const m = d.data;
+        return m?.latest_chapter_id
+          ? {
+              slug,
+              chSlug: m.latest_chapter_id,
+              chTitle: `Chapter ${m.latest_chapter_number}`,
+              date: relTime(m.latest_chapter_time)
+            }
           : { slug, chSlug: null };
       } catch { return { slug, chSlug: null }; }
     }));
@@ -493,8 +606,29 @@ app.get('/api/search', searchLimiter, async (req, res) => {
     const r = await getJSON(
       `/manga/list?q=${encodeURIComponent(q)}&page=1&page_size=10&sort=latest&sort_order=desc`,
       120_000
-    );
-    res.json({ items: (r.data || []).map(mapItem) });
+    ).catch(() => null);
+    if (r) return res.json({ items: (r.data || []).map(mapItem) });
+
+    // Fallback while upstream search (q=) 502s since the Nov 2026
+    // migration: scan recent + top-rated list pages and match the title
+    // locally. Covers the actively-updating catalogue, not their whole
+    // archive — good enough until their search recovers.
+    const pool = await Promise.all([
+      ...[1, 2, 3, 4].map(p => getJSON(`/manga/list?page=${p}&page_size=24&sort=latest&sort_order=desc`, 300_000).catch(() => null)),
+      ...[1, 2].map(p => getJSON(`/manga/list?page=${p}&page_size=24&sort=rating&sort_order=desc`, 300_000).catch(() => null))
+    ]);
+    const needle = String(q).toLowerCase();
+    const seenIds = new Set();
+    const items = [];
+    for (const pg of pool) {
+      for (const m of (pg?.data || [])) {
+        if (!m.manga_id || seenIds.has(m.manga_id)) continue;
+        seenIds.add(m.manga_id);
+        const hay = `${m.title || ''} ${m.alternative_title || ''}`.toLowerCase();
+        if (hay.includes(needle)) items.push(mapItem(m));
+      }
+    }
+    res.json({ items: items.slice(0, 20) });
   } catch (e) {
     console.error('/api/search error:', e.message);
     res.status(502).json({ error: 'Pencarian gagal.' });
@@ -573,16 +707,36 @@ app.get('/api/top', async (req, res) => {
     const fmt = String(type).toLowerCase();
 
     // /manga/top ignores the format param — with a type filter,
-    // rank by user rating within that format instead
+    // rank by user rating within that format instead. Since Shinigami's
+    // Nov 2026 migration the weekly chart and the format= filter both
+    // 502: use the daily chart (rating list as backup) and filter the
+    // type server-side via /api/list's approach.
     let r;
     if (fmt) {
-      r = await getJSON(
-        `/manga/list?page=${page}&page_size=24&sort=rating&sort_order=desc&format=${encodeURIComponent(fmt)}`,
-        120_000
-      );
-    } else {
-      r = await getJSON(`/manga/top?filter=weekly&page=${page}&page_size=24`, 120_000);
+      const collected = [];
+      let exhausted = false;
+      const lastUp = Math.min(Number(page) * 3, 12);
+      for (let up = 1; up <= lastUp; up++) {
+        const rr = await getJSON(
+          `/manga/list?page=${up}&page_size=24&sort=rating&sort_order=desc`,
+          120_000
+        ).catch(() => null);
+        if (!rr) break;
+        const data = rr.data || [];
+        for (const m of data) {
+          if (typeOf(m).toLowerCase() === fmt) collected.push(m);
+        }
+        if (data.length === 0 || up >= (rr.meta?.total_page || up)) { exhausted = true; break; }
+        if (collected.length >= Number(page) * 24) break;
+      }
+      return res.json({
+        items: collected.slice((Number(page) - 1) * 24, Number(page) * 24).map(mapItem),
+        page: Number(page),
+        totalPages: exhausted ? Math.max(1, Math.ceil(collected.length / 24)) : Number(page) + 1
+      });
     }
+    r = await getJSON(`/manga/top?filter=daily&page=${page}&page_size=24`, 120_000).catch(() => null);
+    if (!r) r = await getJSON(`/manga/list?page=${page}&page_size=24&sort=rating&sort_order=desc`, 120_000);
     res.json({
       items: (r.data || []).map(mapItem),
       page: Number(page),
