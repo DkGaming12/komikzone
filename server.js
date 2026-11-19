@@ -286,6 +286,32 @@ async function fetchChapters(mangaId, walkBudgetMs = 8000) {
     );
     for (const r of rest) if (r?.data?.length) seeds = seeds.concat(r.data);
   }
+
+  // The ascending list's health is independent of the descending one:
+  // for many titles ONLY asc page 1 answers (chapters 0-23) while desc
+  // pages covering the oldest chapters are dead — without this union
+  // those titles show no Chapter 1 at all even though upstream can
+  // still serve it. Fetch asc page 1; only if it answers, pull the
+  // remaining asc pages in parallel too (same cap as desc).
+  const asc1 = await getJSON(
+    `/chapter/${mangaId}/list?page=1&page_size=24&sort_by=chapter_number&sort_order=asc`,
+    300_000, { timeout: 6000, retries: 0 }
+  ).catch(() => null);
+  if (asc1?.data?.length) {
+    seeds = seeds.concat(asc1.data);
+    const ascPages = Math.min(asc1?.meta?.total_page || 1, 20);
+    if (ascPages > 1) {
+      const ascRest = await Promise.all(
+        Array.from({ length: ascPages - 1 }, (_, i) => i + 2).map(p =>
+          getJSON(
+            `/chapter/${mangaId}/list?page=${p}&page_size=24&sort_by=chapter_number&sort_order=asc`,
+            300_000, { timeout: 6000, retries: 0 }
+          ).catch(() => null)
+        )
+      );
+      for (const r of ascRest) if (r?.data?.length) seeds = seeds.concat(r.data);
+    }
+  }
   const byId = new Map();
   for (const s of seeds) if (s?.chapter_id && !byId.has(s.chapter_id)) byId.set(s.chapter_id, s);
   seeds = [...byId.values()].sort((a, b) => (b.chapter_number ?? 0) - (a.chapter_number ?? 0));
@@ -745,6 +771,19 @@ app.get('/api/manga/:slug', async (req, res) => {
     ]);
     const m = detailR.data;
     if (!m || !m.title) return res.status(404).json({ error: 'Komik tidak ditemukan.' });
+
+    // An incomplete chapter list (oldest chapter still > 1, i.e. the
+    // head is missing because upstream pages are dead right now) must
+    // not sit in the CDN for the full 300s/1800s window — users kept
+    // seeing a broken list long after upstream recovered. Serve those
+    // with a short cache so the edge re-checks quickly; complete lists
+    // keep the long cache set by the CDN_CACHE middleware.
+    const chapNums = (chapters || [])
+      .map(c => parseFloat(String(c.title).replace(/[^0-9.]/g, '')))
+      .filter(n => !isNaN(n));
+    if (!chapNums.length || Math.min(...chapNums) > 1) {
+      res.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+    }
 
     res.json({
       title: m.title,
