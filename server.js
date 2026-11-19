@@ -269,59 +269,63 @@ async function fetchChapters(mangaId, walkBudgetMs = 8000) {
   // total_page from its meta, then pull the remaining pages in parallel
   // (capped at 20 pages ≈ 480 chapters; longer series continue via the
   // walk + client-side deepening).
-  const page1 = await getJSON(
-    `/chapter/${mangaId}/list?page=1&page_size=24&sort_by=chapter_number&sort_order=desc`,
-    300_000, { timeout: 6000, retries: 0 }
-  ).catch(() => null);
-  let seeds = page1?.data || [];
-  const totalPage = Math.min(page1?.meta?.total_page || 1, 20);
-  if (totalPage > 1) {
-    const rest = await Promise.all(
-      Array.from({ length: totalPage - 1 }, (_, i) => i + 2).map(p =>
-        getJSON(
-          `/chapter/${mangaId}/list?page=${p}&page_size=24&sort_by=chapter_number&sort_order=desc`,
-          300_000, { timeout: 6000, retries: 0 }
-        ).catch(() => null)
-      )
-    );
-    for (const r of rest) if (r?.data?.length) seeds = seeds.concat(r.data);
-  }
+  // One direction of the paged list (@24). Failed pages get ONE retry
+  // pass: upstream page health flaps between calls (a page that 502s
+  // or times out now may answer seconds later), and a single failed
+  // page otherwise punches a 24-chapter hole in the result.
+  const fetchPaged = async (order) => {
+    const page1 = await getJSON(
+      `/chapter/${mangaId}/list?page=1&page_size=24&sort_by=chapter_number&sort_order=${order}`,
+      300_000, { timeout: 6000, retries: 0 }
+    ).catch(() => null);
+    if (!page1?.data?.length) return { rows: [], totalRecord: 0 };
+    let rows = [...page1.data];
+    const totalPage = Math.min(page1?.meta?.total_page || 1, 20);
+    if (totalPage > 1) {
+      const pages = Array.from({ length: totalPage - 1 }, (_, i) => i + 2);
+      const fetchPage = (p, timeout) => getJSON(
+        `/chapter/${mangaId}/list?page=${p}&page_size=24&sort_by=chapter_number&sort_order=${order}`,
+        300_000, { timeout, retries: 0 }
+      ).catch(() => null);
+      const rest = await Promise.all(pages.map(p => fetchPage(p, 6000)));
+      const failed = [];
+      rest.forEach((r, i) => {
+        if (r?.data?.length) rows = rows.concat(r.data); else failed.push(pages[i]);
+      });
+      if (failed.length) {
+        const retry = await Promise.all(failed.map(p => fetchPage(p, 8000)));
+        for (const r of retry) if (r?.data?.length) rows = rows.concat(r.data);
+      }
+    }
+    return { rows, totalRecord: page1?.meta?.total_record || 0 };
+  };
+  const dedupeSort = (rows) => {
+    const byId = new Map();
+    for (const s of rows) if (s?.chapter_id && !byId.has(s.chapter_id)) byId.set(s.chapter_id, s);
+    return [...byId.values()].sort((a, b) => (b.chapter_number ?? 0) - (a.chapter_number ?? 0));
+  };
+  // Complete from one list alone? (row count matches upstream's total,
+  // or the rows already reach chapter 1) — then no other source needed.
+  const isComplete = (rows, totalRecord) => {
+    if (!rows.length) return false;
+    const min = Math.min(...rows.map(s => s.chapter_number ?? Infinity));
+    return rows.length >= totalRecord || min <= 1;
+  };
+
+  const desc = await fetchPaged('desc');
+  let seeds = dedupeSort(desc.rows);
+  if (isComplete(seeds, desc.totalRecord)) return seeds.map(mapChapter);
 
   // The ascending list's health is independent of the descending one:
   // for many titles ONLY asc page 1 answers (chapters 0-23) while desc
   // pages covering the oldest chapters are dead — without this union
   // those titles show no Chapter 1 at all even though upstream can
-  // still serve it. Fetch asc page 1; only if it answers, pull the
-  // remaining asc pages in parallel too (same cap as desc).
-  const asc1 = await getJSON(
-    `/chapter/${mangaId}/list?page=1&page_size=24&sort_by=chapter_number&sort_order=asc`,
-    300_000, { timeout: 6000, retries: 0 }
-  ).catch(() => null);
-  if (asc1?.data?.length) {
-    seeds = seeds.concat(asc1.data);
-    const ascPages = Math.min(asc1?.meta?.total_page || 1, 20);
-    if (ascPages > 1) {
-      const ascRest = await Promise.all(
-        Array.from({ length: ascPages - 1 }, (_, i) => i + 2).map(p =>
-          getJSON(
-            `/chapter/${mangaId}/list?page=${p}&page_size=24&sort_by=chapter_number&sort_order=asc`,
-            300_000, { timeout: 6000, retries: 0 }
-          ).catch(() => null)
-        )
-      );
-      for (const r of ascRest) if (r?.data?.length) seeds = seeds.concat(r.data);
-    }
-  }
-  const byId = new Map();
-  for (const s of seeds) if (s?.chapter_id && !byId.has(s.chapter_id)) byId.set(s.chapter_id, s);
-  seeds = [...byId.values()].sort((a, b) => (b.chapter_number ?? 0) - (a.chapter_number ?? 0));
-
-  // Complete from the list alone? (row count matches upstream's total,
-  // or the rows already reach chapter 1) — return without walking.
-  const totalRecord = page1?.meta?.total_record || 0;
-  const minSeed = seeds.length ? Math.min(...seeds.map(s => s.chapter_number ?? Infinity)) : Infinity;
-  if (seeds.length && (seeds.length >= totalRecord || minSeed <= 1)) {
-    return seeds.map(mapChapter);
+  // still serve it. Only fetched when desc alone is incomplete, so
+  // healthy titles pay no extra upstream load.
+  const asc = await fetchPaged('asc');
+  if (asc.rows.length) {
+    seeds = dedupeSort(seeds.concat(asc.rows));
+    if (isComplete(seeds, desc.totalRecord || asc.totalRecord)) return seeds.map(mapChapter);
   }
   return fetchChaptersWalk(mangaId, walkBudgetMs, seeds);
 }
