@@ -57,18 +57,34 @@
     },
     {
       "src": "/(explore|top|all-series|genre|manga|chapter|p)(/[^.]*)?$",
-      "dest": "/index.html"
+      "dest": "/index.html",
+      "headers": {
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; font-src 'self' https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'none'; img-src 'self' data: https://cdn.shinigami.gg https://assets.shngm.id https://api.shngm.io https://*.shinigami.asia; object-src 'none'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://api.shinigami.io; frame-src 'none'; upgrade-insecure-requests",
+        "X-Frame-Options": "SAMEORIGIN",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer"
+      }
     },
     {
       "src": "/",
       "dest": "/index.html",
       "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate"
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; font-src 'self' https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'none'; img-src 'self' data: https://cdn.shinigami.gg https://assets.shngm.id https://api.shngm.io https://*.shinigami.asia; object-src 'none'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://api.shinigami.io; frame-src 'none'; upgrade-insecure-requests",
+        "X-Frame-Options": "SAMEORIGIN",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer"
       }
     },
     {
       "src": "/(.*)",
-      "dest": "/$1"
+      "dest": "/$1",
+      "headers": {
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; font-src 'self' https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'none'; img-src 'self' data: https://cdn.shinigami.gg https://assets.shngm.id https://api.shngm.io https://*.shinigami.asia; object-src 'none'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://api.shinigami.io; frame-src 'none'; upgrade-insecure-requests",
+        "X-Frame-Options": "SAMEORIGIN",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer"
+      }
     }
   ],
   "headers": [
@@ -96,27 +112,6 @@
         {
           "key": "Cache-Control",
           "value": "no-cache, no-store, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; base-uri 'self'; font-src 'self' https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'none'; img-src 'self' data: https://cdn.shinigami.gg https://assets.shngm.id https://api.shngm.io https://*.shinigami.asia; object-src 'none'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://api.shinigami.io; frame-src 'none'; upgrade-insecure-requests"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "SAMEORIGIN"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "no-referrer"
         }
       ]
     }
