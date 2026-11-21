@@ -1417,9 +1417,10 @@ function renderChItems() {
   const vis = list.slice(0, _chUi.shown);
   if (!vis.length) return `<div class="ch-empty">${ic('inbox')} Chapter tidak ditemukan.</div>`;
   const img = (_chManga && _chManga.img) || '';
+  const thumbErr = img ? `this.onerror=null;this.src='${esc(img)}'` : `this.style.visibility='hidden'`;
   const item = (c) => `
     <div class="ch-item" data-ch="${esc(c.slug)}">
-      ${img ? `<img class="ch-thumb" src="${esc(img)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : ''}
+      <img class="ch-thumb" src="${PROXY}/api/chapter-thumb/${esc(c.slug)}" alt="" loading="lazy" onerror="${thumbErr}">
       <div class="ch-txt">
         <span class="ch-num">${esc(c.title || 'Chapter')}</span>
         <span class="ch-date">${c.rdate ? 'Rilis ' + esc(c.rdate) : esc(c.date || '')}</span>

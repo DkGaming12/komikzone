@@ -748,6 +748,30 @@ app.get('/api/manga/:slug', async (req, res) => {
   }
 });
 
+/* ── /api/chapter-thumb/:id — preview per chapter (halaman pertamanya) ──
+   Setiap baris chapter menampilkan preview chapter ITU SENDIRI, bukan
+   sampul seri: gambar pertama dari chapter detail. URL hasil disimpan
+   di memori (halaman pertama chapter tidak pernah berubah) dan klien
+   diarahkan langsung ke CDN, jadi byte gambar tidak lewat server ini. */
+const _thumbCache = new Map();
+app.get('/api/chapter-thumb/:id', async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  if (!id) return res.status(400).end();
+  const hit = _thumbCache.get(id);
+  if (hit) return res.redirect(302, hit);
+  try {
+    const r = await getJSON(`/chapter/detail/${id}`, 3_600_000).catch(() => null);
+    const d = r?.data;
+    const first = d?.chapter?.data?.[0];
+    if (!first) return res.redirect(302, 'https://cdn.shinigami.gg/assets/image/default.jpg');
+    const url = (d.base_url || 'https://cdn.shinigami.gg') + d.chapter.path + first;
+    _thumbCache.set(id, url);
+    return res.redirect(302, url);
+  } catch {
+    return res.redirect(302, 'https://cdn.shinigami.gg/assets/image/default.jpg');
+  }
+});
+
 /* ── /api/chapter?slug= (slug = Shinigami chapter UUID) ─ */
 app.get('/api/chapter', async (req, res) => {
   try {
