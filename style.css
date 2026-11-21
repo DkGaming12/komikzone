@@ -4793,6 +4793,10 @@ body.in-reader .reader-floatnav.rfn-hidden {
   height: 100%;
   object-fit: cover;
   display: block;
+  opacity: 1;
+  border: none;
+  box-shadow: none;
+  background: transparent;
 }
 .feat-rate {
   position: absolute;
