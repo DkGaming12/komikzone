@@ -1166,8 +1166,8 @@ async function openDetail(slug) {
           <div class="d-btns">
             <button class="btn-primary" id="d-read-btn"></button>
             <button class="btn-ghost" id="d-latest-btn">Baca Chapter Terbaru</button>
-            <button class="btn-ghost" id="d-bm-btn" style="padding: 0 10px; font-size: 1.1rem;" title="Simpan ke Library">${ic('bookmark')}</button>
-            <button class="btn-ghost" id="d-share-btn" style="padding: 0 10px; font-size: 1.1rem;" title="Bagikan komik ini">${ic('upload')}</button>
+            <button class="btn-ghost" id="d-bm-btn" title="Simpan ke Library">${ic('bookmark')}</button>
+            <button class="btn-ghost btn-icon" id="d-share-btn" title="Bagikan komik ini">${ic('upload')}</button>
           </div>
         </div>
       </div>
