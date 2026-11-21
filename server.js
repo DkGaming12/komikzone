@@ -967,7 +967,19 @@ app.get('/sitemap.xml', async (req, res) => {
 const fs = require('fs');
 let _indexHtml = null;
 
+// Escape text taken from upstream data before it is spliced into HTML.
+// The old code escaped only double quotes, so a catalogue title holding
+// markup (e.g. a closing title tag) could inject HTML into share pages.
+const escHtml = (v) => String(v ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;');
+
 async function serveWithDynamicSEO(req, res, title, description, image) {
+  title = escHtml(title);
+  description = escHtml(description);
+  image = escHtml(image);
   try {
     if (!_indexHtml) {
       _indexHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
@@ -1000,8 +1012,8 @@ app.get('/manga/:slug', async (req, res) => {
     const r = await getJSON(`/manga/detail/${slug}`, 300_000).catch(() => null);
     if (r && r.data) {
       const m = r.data;
-      const title = m.title ? m.title.replace(/"/g, '&quot;') : '';
-      const desc = m.description ? m.description.substring(0, 150).replace(/"/g, '&quot;') + '...' : '';
+      const title = m.title || '';
+      const desc = m.description ? m.description.substring(0, 150) + '...' : '';
       const img = m.cover_portrait_url || m.cover_image_url || '';
       return serveWithDynamicSEO(req, res, `Baca ${title}`, desc, img);
     }
