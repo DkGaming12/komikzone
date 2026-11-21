@@ -420,7 +420,8 @@ app.get('/api/home', async (req, res) => {
       score: scoreOf(m),
       type: typeOf(m),
       genres: genresOf(m),
-      synopsis: m.description || ''
+      synopsis: m.description || '',
+      latestChapter: m.latest_chapter_number != null ? `Ch. ${m.latest_chapter_number}` : ''
     })).slice(0, 7);
 
     // Latest updates with chapter badges — api.shinigami.io list items no
