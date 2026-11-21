@@ -220,12 +220,24 @@ function mapItem(m) {
   };
 }
 
-/** Map a chapter-list entry: { title, slug, date } (newest-first preserved) */
+const MONTHS_ID = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+/** Absolute release date, e.g. "26 Nov 2024" (Shinigami-style chapter rows) */
+function fmtRDate(iso) {
+  if (!iso) return '';
+  const t = new Date(iso);
+  if (isNaN(t)) return '';
+  return `${t.getDate()} ${MONTHS_ID[t.getMonth()]} ${t.getFullYear()}`;
+}
+
+/** Map a chapter-list entry: { title, slug, date, rdate } (newest-first preserved) */
 function mapChapter(c) {
+  const raw = c.release_date || c.created_at;
   return {
     title: `Chapter ${c.chapter_number}`,
     slug: c.chapter_id,
-    date: relTime(c.release_date || c.created_at)
+    date: relTime(raw),
+    rdate: fmtRDate(raw)
   };
 }
 

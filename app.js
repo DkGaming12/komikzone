@@ -74,6 +74,7 @@ let topType = '';
 let allType = '';
 
 let slideIdx = 0, slideN = 0, slideTimer = null;
+let slidePos = 0;
 
 /* ── URL routing (SEO: tiap halaman punya URL sendiri) ── */
 const PAGE_PATHS = {
@@ -444,48 +445,59 @@ function initSlider(items) {
   if (!sl || !items.length) return;
 
   slideN = items.length;
-  sl.innerHTML = items.map((m, i) => `
-    <div class="feat-slide" data-i="${i}" data-slug="${esc(m.slug)}">
-      ${m.img ? `<img class="feat-cover" src="${esc(m.img)}" alt="${esc(m.title || '')}" loading="${i === 0 ? 'eager' : 'lazy'}" onerror="this.style.opacity=0">` : ''}
+  const mkSlide = (m, i, pos) => `
+    <div class="feat-slide" data-i="${i}" data-pos="${pos}" data-slug="${esc(m.slug)}">
+      ${m.img ? `<img class="feat-cover" src="${esc(m.img)}" alt="${esc(m.title || '')}" loading="lazy" onerror="this.style.opacity=0">` : ''}
       ${m.score ? `<span class="feat-rate">\u2605 ${esc(m.score)}</span>` : ''}
       <div class="feat-cap"><span class="feat-cap-title">${esc(m.title || '')}</span></div>
-    </div>`).join('');
+    </div>`;
+  let slidesHtml = '';
+  for (let repI = 0; repI < 3; repI++) items.forEach((m, i) => { slidesHtml += mkSlide(m, i, repI * slideN + i); });
+  sl.innerHTML = slidesHtml;
 
   dot.innerHTML = items.map((_, i) =>
     `<button class="fdot${i === 0 ? ' on' : ''}" data-slide="${i}" aria-label="Slide ${i + 1}"></button>`).join('');
 
   clearInterval(slideTimer);
-  slideIdx = 0;
-  slideTimer = setInterval(() => goSlide((slideIdx + 1) % slideN), 5000);
-  goSlide(0);
+  slidePos = slideN;
+  slideTimer = setInterval(() => goSlidePos(slidePos + 1), 5000);
+  goSlidePos(slideN, false);
 }
 
-function goSlide(i) {
-  slideIdx = i;
+function goSlidePos(p, animate = true) {
   const sl = $('feat-slides');
-  if (sl && sl.children.length) {
-    const card = sl.children[0];
-    const w = card.offsetWidth;
-    const gap = 18;
-    const view = sl.parentElement.clientWidth;
-    const x = view / 2 - (i * (w + gap) + w / 2);
-    sl.style.transform = `translateX(${x}px)`;
+  if (!sl || !sl.children.length || !slideN) return;
+  slidePos = p;
+  slideIdx = ((p % slideN) + slideN) % slideN;
+  const card = sl.children[0];
+  const w = card.offsetWidth;
+  const gap = 18;
+  const view = sl.parentElement.clientWidth;
+  const x = view / 2 - (p * (w + gap) + w / 2);
+  if (!animate) sl.style.transition = 'none';
+  sl.style.transform = `translateX(${x}px)`;
+  if (!animate) { void sl.offsetWidth; sl.style.transition = ''; }
+  $$('.feat-slide').forEach(s2 => s2.classList.toggle('active', parseInt(s2.dataset.pos, 10) === p));
+  $$('.fdot').forEach((d, j) => d.classList.toggle('on', j === slideIdx));
+  if (p < slideN || p >= slideN * 2) {
+    const np = p < slideN ? p + slideN : p - slideN;
+    setTimeout(() => { if (slidePos === p) goSlidePos(np, false); }, animate ? 580 : 0);
   }
-  $$('.feat-slide').forEach((s, j) => s.classList.toggle('active', j === i));
-  $$('.fdot').forEach((d, j) => d.classList.toggle('on', j === i));
 }
 
-window.addEventListener('resize', () => { if (slideN) goSlide(slideIdx); });
+function goSlide(i) { goSlidePos(slideN + i); }
 
-$('feat-prev').addEventListener('click', () => goSlide((slideIdx - 1 + slideN) % slideN));
-$('feat-next').addEventListener('click', () => goSlide((slideIdx + 1) % slideN));
+window.addEventListener('resize', () => { if (slideN) goSlidePos(slidePos, false); });
+
+$('feat-prev').addEventListener('click', () => goSlidePos(slidePos - 1));
+$('feat-next').addEventListener('click', () => goSlidePos(slidePos + 1));
 
 // Slider click delegation (slide / dot / Baca button)
 $('feat-slides').addEventListener('click', e => {
   const slide = e.target.closest('.feat-slide');
   if (!slide?.dataset.slug) return;
-  const i = parseInt(slide.dataset.i || '0', 10);
-  if (i !== slideIdx) { goSlide(i); return; }
+  const pos = parseInt(slide.dataset.pos || '0', 10);
+  if (pos !== slidePos) { goSlidePos(pos); return; }
   openDetail(slide.dataset.slug);
 });
 $('feat-dots').addEventListener('click', e => {
@@ -604,11 +616,11 @@ async function loadRank(kind) {
   let items = [];
   try {
     if (kind === 'reko') {
-      if (_rekoAll.length) items = _rekoAll;
-      else {
-        const d = await api(`${PROXY}/api/home`);
-        items = [...(d?.popular || []), ...(d?.featured || [])];
-      }
+      const d = await api(`${PROXY}/api/home`);
+      const pop = d?.popular || [];
+      const chMap = new Map(pop.map(m => [m.slug, m.latestChapter]));
+      items = [...(d?.featured || []), ...pop].map(m =>
+        m.latestChapter ? m : { ...m, latestChapter: chMap.get(m.slug) || '' });
     } else {
       const d = await api(`${PROXY}/api/top?range=${kind}`);
       items = d?.items || [];
@@ -1185,7 +1197,11 @@ async function openDetail(slug) {
 
     <!-- Chapter list -->
     <div class="ch-section" id="ch-section">
-      <h3><span>${ic('library')} Daftar Chapter</span></h3>
+      <h3><span>${ic('library')} Chapter <span class="ch-count">${(d.chapters || []).length}</span></span></h3>
+      <div class="ch-tools">
+        <div class="ch-search">${ic('search')}<input id="ch-q" type="text" placeholder="Cari chapter..." autocomplete="off"></div>
+        <button class="ch-sort" id="ch-sort">${ic('refresh')} <span id="ch-sort-lbl">Terbaru</span></button>
+      </div>
       <div class="ch-list" id="ch-list">
         ${buildChapterList(d.chapters || [], { slug, title: d.title, img: d.img })}
       </div>
@@ -1313,7 +1329,7 @@ async function deepenDetailChapters(slug, d) {
     if (_curMangaSlug !== slug || !$('ch-list')) return;
     if (!nd?.chapters?.length) { if (++stale >= 2) return; continue; }
     const merged = new Map();
-    for (const c of nd.chapters) merged.set(c.slug, { slug: c.slug, title: c.title, date: c.date });
+    for (const c of nd.chapters) merged.set(c.slug, { slug: c.slug, title: c.title, date: c.date, rdate: c.rdate });
     for (const c of _curChapters) if (!merged.has(c.slug)) merged.set(c.slug, c);
     const arr = [...merged.values()].sort((a, b) => (numOf(b) ?? 0) - (numOf(a) ?? 0));
     if (arr.length <= _curChapters.length) { if (++stale >= 2) return; continue; }
@@ -1377,45 +1393,68 @@ const adBlock = (n = 1) => `<div class="ad-block">${Array(n).fill(
   `<div class="ad-box ad-728">Slot iklan tersedia. <a href="mailto:dknimelol@gmail.com">Hubungi dknimelol@gmail.com</a></div>`
 ).join('')}</div>`;
 
-// Build chapter list with range tabs (Ch 1–50, 51–100, etc.)
-// Server returns newest first, so we reverse to show Ch 1 at top
+// Chapter list ala Shinigami: terbaru dulu, grid 2 kolom simetris,
+// 100 per muat + "Muat lebih banyak", cari + urutkan Terbaru/Terlama.
+let _chUi = { slug: '', order: 'desc', shown: 100, q: '' };
+let _chAll = [];
+let _chManga = null;
+
 function buildChapterList(chapters, manga) {
-  if (!chapters.length) return `<div class="ch-empty">${ic('inbox')} Belum ada chapter tersedia.</div>`;
+  _chAll = chapters || [];
+  if (manga) _chManga = manga;
+  const slug = (manga && manga.slug) || '';
+  if (_chUi.slug !== slug) _chUi = { slug, order: 'desc', shown: 100, q: '' };
+  if (!_chAll.length) return `<div class="ch-empty">${ic('inbox')} Belum ada chapter tersedia.</div>`;
+  return renderChItems();
+}
 
-  const key = ((manga && manga.slug) || '_cur').replace(/[^a-z0-9-]/gi, '');
-  const sorted = [...chapters].reverse(); // oldest → newest
-
-  const renderItem = (c) => `
+function renderChItems() {
+  const q = _chUi.q.trim().toLowerCase().replace(/^chapter\s*/, '');
+  let list = _chAll;
+  if (q) list = list.filter(c => (c.title || '').toLowerCase().replace('chapter ', '').includes(q));
+  if (_chUi.order === 'asc') list = [...list].reverse();
+  const total = list.length;
+  const vis = list.slice(0, _chUi.shown);
+  if (!vis.length) return `<div class="ch-empty">${ic('inbox')} Chapter tidak ditemukan.</div>`;
+  const img = (_chManga && _chManga.img) || '';
+  const item = (c) => `
     <div class="ch-item" data-ch="${esc(c.slug)}">
-      <span class="ch-num">${esc(c.title || 'Chapter')}</span>
-      <span class="ch-title-txt"></span>
-      <span class="ch-date">${esc(c.date || '')}</span>
+      ${img ? `<img class="ch-thumb" src="${esc(img)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : ''}
+      <div class="ch-txt">
+        <span class="ch-num">${esc(c.title || 'Chapter')}</span>
+        <span class="ch-date">${c.rdate ? 'Rilis ' + esc(c.rdate) : esc(c.date || '')}</span>
+      </div>
       <button class="ch-dl-btn" data-dl="${esc(c.slug)}" title="Download untuk dibaca offline">${ic('download')}</button>
-      <button class="ch-read-btn">${ic('book')} Baca</button>
     </div>`;
+  return `<div class="ch-grid">${vis.map(item).join('')}</div>` +
+    (total > vis.length ? `<button class="ch-more" id="ch-more">Muat lebih banyak <b>${vis.length} / ${total}</b></button>` : '');
+}
 
-  const RANGE = 50;
-  const totalRanges = Math.ceil(sorted.length / RANGE);
-
-  if (totalRanges <= 1) {
-    return `<div class="ch-range-panel" id="chr-${key}-0">${sorted.map(renderItem).join('')}</div>`;
-  }
-
-  const tabs = Array.from({ length: totalRanges }, (_, i) => {
-    const start = i * RANGE + 1;
-    const end = Math.min((i + 1) * RANGE, sorted.length);
-    return `<button class="ch-range-btn${i === 0 ? ' active' : ''}" data-rkey="${key}" data-ridx="${i}">Ch ${start}–${end}</button>`;
-  }).join('');
-
-  const panels = Array.from({ length: totalRanges }, (_, i) =>
-    `<div class="ch-range-panel${i === 0 ? '' : ' hidden'}" id="chr-${key}-${i}">${sorted.slice(i * RANGE, (i + 1) * RANGE).map(renderItem).join('')}</div>`
-  ).join('');
-
-  return `<div class="ch-range-tabs" id="chrt-${key}">${tabs}</div>${panels}`;
+function refreshChList() {
+  const el = $('ch-list');
+  if (el) { el.innerHTML = renderChItems(); markDownloadedButtons(); }
 }
 
 // Delegated: chapter range tabs + chapter items
+document.addEventListener('input', e => {
+  if (e.target.id !== 'ch-q') return;
+  _chUi.q = e.target.value;
+  _chUi.shown = 100;
+  refreshChList();
+});
+
 document.addEventListener('click', e => {
+  const sortBtn = e.target.closest('#ch-sort');
+  if (sortBtn) {
+    _chUi.order = _chUi.order === 'desc' ? 'asc' : 'desc';
+    _chUi.shown = 100;
+    const lbl = $('ch-sort-lbl');
+    if (lbl) lbl.textContent = _chUi.order === 'desc' ? 'Terbaru' : 'Terlama';
+    refreshChList();
+    return;
+  }
+  const moreBtn = e.target.closest('#ch-more');
+  if (moreBtn) { _chUi.shown += 100; refreshChList(); return; }
   const tab = e.target.closest('.ch-range-btn');
   if (tab) {
     const key = tab.dataset.rkey, idx = tab.dataset.ridx;
