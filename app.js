@@ -446,23 +446,9 @@ function initSlider(items) {
   slideN = items.length;
   sl.innerHTML = items.map((m, i) => `
     <div class="feat-slide" data-i="${i}" data-slug="${esc(m.slug)}">
-      <div class="feat-bg" style="background-image:url('${esc(m.banner || m.img || '')}')"></div>
-      <div class="feat-overlay"></div>
-      <div class="feat-body">
-        ${m.img ? `<img class="feat-cover" src="${esc(m.img)}" alt="${esc(m.title || '')}" loading="${i === 0 ? 'eager' : 'lazy'}" onload="this.classList.add('ld')" onerror="this.onerror=null;this.classList.add('ld')">` : ''}
-        <div class="feat-info">
-          <div class="feat-tags">
-            ${m.score ? `<span class="tag t-score">★ ${esc(m.score)}</span>` : ''}
-            ${m.type ? `<span class="tag t-${esc(m.type.toLowerCase())}">${esc(m.type)}</span>` : ''}
-            ${(m.genres || []).slice(0, 4).map(g => `<span class="tag t-genre">${esc(g)}</span>`).join('')}
-          </div>
-          <h2 class="feat-title">${esc(m.title || '')}</h2>
-          ${m.synopsis ? `<p class="feat-syn">${esc(m.synopsis)}</p>` : ''}
-          <div class="feat-btns">
-            <button class="btn-primary" data-open="${esc(m.slug)}">${ic('book')} Baca Sekarang</button>
-          </div>
-        </div>
-      </div>
+      ${m.img ? `<img class="feat-cover" src="${esc(m.img)}" alt="${esc(m.title || '')}" loading="${i === 0 ? 'eager' : 'lazy'}" onerror="this.style.opacity=0">` : ''}
+      ${m.score ? `<span class="feat-rate">\u2605 ${esc(m.score)}</span>` : ''}
+      <div class="feat-cap"><span class="feat-cap-title">${esc(m.title || '')}</span></div>
     </div>`).join('');
 
   dot.innerHTML = items.map((_, i) =>
@@ -477,20 +463,30 @@ function initSlider(items) {
 function goSlide(i) {
   slideIdx = i;
   const sl = $('feat-slides');
-  if (sl) sl.style.transform = `translateX(-${i * 100}%)`;
+  if (sl && sl.children.length) {
+    const card = sl.children[0];
+    const w = card.offsetWidth;
+    const gap = 18;
+    const view = sl.parentElement.clientWidth;
+    const x = view / 2 - (i * (w + gap) + w / 2);
+    sl.style.transform = `translateX(${x}px)`;
+  }
   $$('.feat-slide').forEach((s, j) => s.classList.toggle('active', j === i));
   $$('.fdot').forEach((d, j) => d.classList.toggle('on', j === i));
 }
+
+window.addEventListener('resize', () => { if (slideN) goSlide(slideIdx); });
 
 $('feat-prev').addEventListener('click', () => goSlide((slideIdx - 1 + slideN) % slideN));
 $('feat-next').addEventListener('click', () => goSlide((slideIdx + 1) % slideN));
 
 // Slider click delegation (slide / dot / Baca button)
 $('feat-slides').addEventListener('click', e => {
-  const btn = e.target.closest('[data-open]');
-  if (btn) { openDetail(btn.dataset.open); return; }
   const slide = e.target.closest('.feat-slide');
-  if (slide?.dataset.slug) openDetail(slide.dataset.slug);
+  if (!slide?.dataset.slug) return;
+  const i = parseInt(slide.dataset.i || '0', 10);
+  if (i !== slideIdx) { goSlide(i); return; }
+  openDetail(slide.dataset.slug);
 });
 $('feat-dots').addEventListener('click', e => {
   const d = e.target.closest('[data-slide]');
@@ -597,6 +593,55 @@ window.loadUpdateTerbaru = loadUpdateTerbaru;
 /* ─────────────────────────────────────────────────────
    HOME
 ───────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────
+   RANK STRIP (ala Shinigami) — Rekomendasi / Harian /
+   Mingguan / All Time, angka rank emas besar
+───────────────────────────────────────────────────── */
+async function loadRank(kind) {
+  const row = $('rank-row');
+  if (!row) return;
+  row.innerHTML = '<div class="rank-loading">Memuat peringkat\u2026</div>';
+  let items = [];
+  try {
+    if (kind === 'reko') {
+      if (_rekoAll.length) items = _rekoAll;
+      else {
+        const d = await api(`${PROXY}/api/home`);
+        items = [...(d?.popular || []), ...(d?.featured || [])];
+      }
+    } else {
+      const d = await api(`${PROXY}/api/top?range=${kind}`);
+      items = d?.items || [];
+    }
+  } catch { items = []; }
+  const seen = new Set();
+  items = items.filter(m => { if (!m?.slug || seen.has(m.slug)) return false; seen.add(m.slug); return true; }).slice(0, 10);
+  if (!items.length) {
+    row.innerHTML = '<div class="rank-loading">Belum ada data peringkat.</div>';
+    return;
+  }
+  row.innerHTML = items.map((m, i) => `
+    <div class="rank-card" data-rslug="${esc(m.slug)}">
+      <span class="rank-num">${i + 1}</span>
+      ${m.img ? `<img src="${esc(m.img)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : ''}
+      <div class="rank-info">
+        <div class="rank-title">${esc(m.title || '')}</div>
+        <div class="rank-sub">${esc(m.latestChapter || '')}${m.latestChapter && m.type ? ' \u00b7 ' : ''}${esc(m.type || '')}</div>
+      </div>
+    </div>`).join('');
+}
+
+$$('.rtab').forEach(b => b.addEventListener('click', () => {
+  $$('.rtab').forEach(x => x.classList.toggle('active', x === b));
+  loadRank(b.dataset.rank);
+}));
+$('rank-row')?.addEventListener('click', e => {
+  const c = e.target.closest('[data-rslug]');
+  if (c) openDetail(c.dataset.rslug);
+});
+$('rank-prev')?.addEventListener('click', () => { const r = $('rank-row'); if (r) r.scrollBy({ left: -460, behavior: 'smooth' }); });
+$('rank-next')?.addEventListener('click', () => { const r = $('rank-row'); if (r) r.scrollBy({ left: 460, behavior: 'smooth' }); });
+
 async function loadHome() {
   const d = await api(`${PROXY}/api/home`);
   if (!d) {
@@ -617,6 +662,7 @@ async function loadHome() {
   _rekoAll = _rekoAll.filter(m => { if (seen.has(m.slug)) return false; seen.add(m.slug); return true; });
   _rekoOffset = 0;
   renderRekoSlider();
+  loadRank('reko');
 
   // Update Terbaru + Terakhir Dibaca (parallel)
   renderHistory();

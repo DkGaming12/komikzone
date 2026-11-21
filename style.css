@@ -4748,3 +4748,229 @@ body.in-reader .reader-floatnav.rfn-hidden {
   .genre-tile { height: 96px; gap: 7px; }
   .genre-name { font-size: .66rem; }
 }
+
+/* =====================================================
+   Beranda ala Shinigami — hero korsel sampul (kartu
+   tengah besar, samping mengintip), strip peringkat
+   angka emas, pill filter emas solid
+   ===================================================== */
+.featured {
+  height: auto;
+  padding: 1.35rem 0 1.05rem;
+  background: transparent;
+  overflow: hidden;
+}
+.featured::after { display: none; }
+.feat-slides {
+  height: auto;
+  align-items: center;
+  gap: 18px;
+}
+.feat-slide {
+  flex: 0 0 auto;
+  width: 158px;
+  height: auto;
+  aspect-ratio: 3 / 4.15;
+  border-radius: 16px;
+  overflow: hidden;
+  opacity: .42;
+  transform: scale(.85);
+  transition: transform .45s ease, opacity .45s ease, box-shadow .45s ease;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+}
+@media (min-width: 768px) {
+  .feat-slide { width: 198px; }
+}
+.feat-slide.active {
+  opacity: 1;
+  transform: scale(1);
+  box-shadow: 0 20px 54px rgba(0, 0, 0, .65), 0 0 0 1px rgba(255, 180, 0, .35), 0 14px 44px rgba(255, 180, 0, .13);
+}
+.feat-slide .feat-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.feat-rate {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  background: rgba(5, 5, 5, .72);
+  backdrop-filter: blur(6px);
+  color: #ffb400;
+  font-weight: 800;
+  font-size: .72rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+.feat-cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: 2.1rem .8rem .7rem;
+  background: linear-gradient(0deg, rgba(0, 0, 0, .88), transparent);
+  opacity: 0;
+  transition: opacity .3s ease;
+}
+.feat-slide.active .feat-cap { opacity: 1; }
+.feat-cap-title {
+  color: #fff;
+  font-weight: 800;
+  font-size: .92rem;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.feat-arrow {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(10, 10, 10, .55);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border2);
+  color: #fff;
+  z-index: 5;
+}
+.feat-dots {
+  position: static;
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Strip peringkat */
+.rank-blk {
+  max-width: 960px;
+  margin: .35rem auto 0;
+  padding: 0 1.25rem;
+}
+.rank-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.rank-tabs::-webkit-scrollbar { display: none; }
+.rtab {
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--txt2);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: .8rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--t);
+}
+.rtab:hover { color: var(--txt); border-color: var(--border2); }
+.rtab.active {
+  background: #ffb400;
+  color: #171204;
+  border-color: transparent;
+  box-shadow: 0 6px 20px rgba(255, 180, 0, .35);
+}
+.rank-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  padding: 14px 2px 6px;
+}
+.rank-row::-webkit-scrollbar { display: none; }
+.rank-card {
+  flex: 0 0 auto;
+  width: 224px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 12px 10px 8px;
+  cursor: pointer;
+  transition: all var(--t);
+}
+.rank-card:hover {
+  border-color: rgba(255, 180, 0, .5);
+  transform: translateY(-2px);
+}
+.rank-num {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--purple);
+  line-height: 1;
+  min-width: 36px;
+  text-align: center;
+}
+.rank-card img {
+  width: 46px;
+  height: 62px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.rank-info { min-width: 0; }
+.rank-title {
+  font-weight: 700;
+  font-size: .82rem;
+  color: var(--txt);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rank-sub {
+  font-size: .7rem;
+  color: var(--txt3);
+  margin-top: 3px;
+  white-space: nowrap;
+}
+.rank-loading {
+  color: var(--txt3);
+  font-size: .82rem;
+  padding: 1.2rem 0;
+}
+.rank-nav {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+.rank-arrow {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--txt);
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: all var(--t);
+}
+.rank-arrow:hover { border-color: rgba(255, 180, 0, .55); color: var(--purple); }
+@media (max-width: 768px) {
+  .rank-nav { display: none; }
+}
+
+/* Pill filter ala Shinigami: aktif = emas solid, teks hitam */
+.filt.active {
+  background: #ffb400;
+  color: #171204;
+  border-color: transparent;
+  box-shadow: 0 6px 20px rgba(255, 180, 0, .3);
+}

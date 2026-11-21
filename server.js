@@ -818,8 +818,13 @@ app.get('/api/top', async (req, res) => {
         totalPages: exhausted ? Math.max(1, Math.ceil(collected.length / 24)) : Number(page) + 1
       });
     }
-    r = await getJSON(`/manga/top?filter=daily&limit=24&cursor=${(Number(page) - 1) * 24}`, 120_000).catch(() => null);
-    if (!r) r = await getJSON(`/manga/list?offset=${(Number(page) - 1) * 24}&limit=24&sort=rating`, 120_000);
+    const range = String(req.query.range || 'daily').toLowerCase();
+    if (range === 'all') {
+      r = await getJSON(`/manga/list?offset=${(Number(page) - 1) * 24}&limit=24&sort=rating`, 120_000).catch(() => null);
+    } else {
+      r = await getJSON(`/manga/top?filter=${range === 'weekly' ? 'weekly' : 'daily'}&limit=24&cursor=${(Number(page) - 1) * 24}`, 120_000).catch(() => null);
+      if (!r) r = await getJSON(`/manga/list?offset=${(Number(page) - 1) * 24}&limit=24&sort=rating`, 120_000);
+    }
     res.json({
       items: (r.data || []).map(mapItem),
       page: Number(page),
