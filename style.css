@@ -4694,3 +4694,57 @@ body.in-reader .reader-floatnav.rfn-hidden {
 .ch-dl-btn .ic, .ch-read-btn .ic { width: 15px; height: 15px; }
 .kc-play .ic { width: 22px; height: 22px; }
 .popup-icon .ic { width: 2.2rem; height: 2.2rem; stroke-width: 1.5; }
+
+/* =====================================================
+   Genre grid rapih — kolom tetap, tile seragam,
+   ikon sejajar, nama tidak meluber
+   ===================================================== */
+.genre-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (min-width: 560px) {
+  .genre-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+@media (min-width: 900px) {
+  .genre-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+.genre-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  height: 104px;
+  padding: .8rem .45rem;
+  overflow: hidden;
+}
+.genre-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  color: var(--purple);
+}
+.genre-icon .ic {
+  width: 1.65rem;
+  height: 1.65rem;
+  stroke-width: 1.7;
+}
+.genre-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 100%;
+  font-size: .72rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--txt);
+  text-align: center;
+  overflow-wrap: break-word;
+}
+@media (max-width: 480px) {
+  .genre-tile { height: 96px; gap: 7px; }
+  .genre-name { font-size: .66rem; }
+}

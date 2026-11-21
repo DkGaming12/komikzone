@@ -1027,7 +1027,7 @@ async function buildGenreTiles() {
   const iconFor = name => ic((GENRES_DEFAULT.find(g => g.name.toLowerCase() === name.toLowerCase()) || {}).icon || 'library');
 
   grid.innerHTML = list.map(g => `
-    <div class="genre-tile" data-gslug="${esc(g.slug)}" data-gname="${esc(g.name)}">
+    <div class="genre-tile" title="${esc(g.name)}" data-gslug="${esc(g.slug)}" data-gname="${esc(g.name)}">
       <span class="genre-icon">${iconFor(g.name)}</span>
       <span class="genre-name">${esc(g.name)}</span>
     </div>`).join('');
