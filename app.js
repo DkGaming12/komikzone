@@ -58,10 +58,10 @@ function hideToast() {
 /** Retry button box for failed loads — fn must be callable from onclick string */
 function retryBox(msg = 'Gagal memuat data.') {
   return `<div class="empty-box" style="padding:3rem">
-    <div class="ei">📡</div>
+    <div class="ei">${ic('wifioff')}</div>
     <div class="et">${esc(msg)}</div>
     <div class="es">Periksa koneksi internet lalu coba lagi</div>
-    <button class="btn-primary" style="margin-top:1rem" onclick="location.reload()">🔄 Muat Ulang</button>
+    <button class="btn-primary" style="margin-top:1rem" onclick="location.reload()">${ic('refresh')} Muat Ulang</button>
   </div>`;
 }
 
@@ -155,28 +155,86 @@ function routeFromPath() {
 }
 window.addEventListener('popstate', routeFromPath);
 
+/* ── Vector icons (Lucide-style, stroke=currentColor) ── */
+const ICONS = {
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  trophy: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
+  library: '<path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/>',
+  bookmark: '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+  phone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 18h.01"/>',
+  scroll: '<path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/>',
+  sparkles: '<path d="M9.94 15.5a2 2 0 0 0-1.44-1.44L2.37 12.5a.5.5 0 0 1 0-.98l6.13-1.56A2 2 0 0 0 9.94 8.5l1.56-6.13a.5.5 0 0 1 .98 0l1.56 6.13a2 2 0 0 0 1.44 1.44l6.13 1.56a.5.5 0 0 1 0 .98l-6.13 1.56a2 2 0 0 0-1.44 1.44l-1.56 6.13a.5.5 0 0 1-.98 0z"/>',
+  refresh: '<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/>',
+  check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  xsm: '<path d="M18 6 6 18M6 6l12 12"/>',
+  alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4M12 17h.01"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+  trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  list: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/>',
+  settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+  wifi: '<path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M12 20h.01"/>',
+  wifioff: '<path d="m2 2 20 20"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 4.17-2.65"/><path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"/><path d="M5 13a10 10 0 0 1 5.24-2.76"/><path d="M12 20h.01"/>',
+  skip: '<path d="m6 4 14 8-14 8z" fill="currentColor" stroke="none"/><path d="M20 5v14"/>',
+  play: '<path d="m6 4 14 8-14 8z" fill="currentColor" stroke="none"/>',
+  coffee: '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2M10 2v2M14 2v2"/>',
+  book: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  frown: '<circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><path d="M9 9h.01M15 9h.01"/>',
+  smile: '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/>',
+  package: '<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/>',
+  plus: '<path d="M5 12h14M12 5v14"/>',
+  loader: '<path d="M21 12a9 9 0 1 1-6.22-8.56"/>',
+  star: '<path d="M12 2.6l2.9 5.87 6.48.94-4.69 4.57 1.11 6.45L12 17.37l-5.8 3.05 1.11-6.45L2.62 9.4l6.48-.94z" fill="currentColor" stroke="none"/>',
+  swords: '<polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" x2="19" y1="19" y2="13"/><line x1="16" x2="20" y1="16" y2="20"/><line x1="19" x2="21" y1="21" y2="19"/><polyline points="9.5 17.5 21 6 21 3 18 3 6.5 14.5"/><line x1="11" x2="5" y1="19" y2="13"/><line x1="8" x2="4" y1="16" y2="20"/><line x1="5" x2="3" y1="21" y2="19"/>',
+  map: '<path d="M9 3 3 5v16l6-2 6 2 6-2V3l-6 2-6-2z"/><path d="M9 3v16M15 5v16"/>',
+  clapper: '<path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
+  wand: '<path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4M19 14v4M10 2v2M7 8H3M21 16h-4M11 3H9"/>',
+  ghost: '<path d="M9 10h.01M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/>',
+  heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/>',
+  rocket: '<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>',
+  leaf: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
+  sprout: '<path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/>',
+  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  eye: '<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
+  zap: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  arrowleft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+};
+function ic(name, cls) {
+  if (name && name.startsWith('flag:')) return '<span class="flag-txt ' + (cls || '') + '">' + name.slice(5) + '</span>';
+  return '<svg class="ic ' + (cls || '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || '') + '</svg>';
+}
+
 /* ── Genre list (fallback if API empty) ── */
 const GENRES_DEFAULT = [
-  { name: 'Action', slug: 'action', icon: '⚔️' },
-  { name: 'Adventure', slug: 'adventure', icon: '🗺️' },
-  { name: 'Comedy', slug: 'comedy', icon: '😄' },
-  { name: 'Drama', slug: 'drama', icon: '🎭' },
-  { name: 'Fantasy', slug: 'fantasy', icon: '🧙' },
-  { name: 'Horror', slug: 'horror', icon: '👻' },
-  { name: 'Mystery', slug: 'mystery', icon: '🔍' },
-  { name: 'Romance', slug: 'romance', icon: '💕' },
-  { name: 'Sci-Fi', slug: 'sci-fi', icon: '🚀' },
-  { name: 'Slice of Life', slug: 'slice-of-life', icon: '🌸' },
-  { name: 'Shounen', slug: 'shounen', icon: '🔥' },
-  { name: 'Seinen', slug: 'seinen', icon: '🗡️' },
-  { name: 'Josei', slug: 'josei', icon: '💐' },
-  { name: 'Shoujo', slug: 'shoujo', icon: '🌷' },
-  { name: 'Manhwa', slug: 'manhwa', icon: '🇰🇷' },
-  { name: 'Manhua', slug: 'manhua', icon: '🇨🇳' },
-  { name: 'Isekai', slug: 'isekai', icon: '🌀' },
-  { name: 'Martial Arts', slug: 'martial-arts', icon: '🥋' },
-  { name: 'Supernatural', slug: 'supernatural', icon: '👁️' },
-  { name: 'Psychological', slug: 'psychological', icon: '🧠' },
+  { name: 'Action', slug: 'action', icon: 'swords' },
+  { name: 'Adventure', slug: 'adventure', icon: 'map' },
+  { name: 'Comedy', slug: 'comedy', icon: 'smile' },
+  { name: 'Drama', slug: 'drama', icon: 'clapper' },
+  { name: 'Fantasy', slug: 'fantasy', icon: 'wand' },
+  { name: 'Horror', slug: 'horror', icon: 'ghost' },
+  { name: 'Mystery', slug: 'mystery', icon: 'search' },
+  { name: 'Romance', slug: 'romance', icon: 'heart' },
+  { name: 'Sci-Fi', slug: 'sci-fi', icon: 'rocket' },
+  { name: 'Slice of Life', slug: 'slice-of-life', icon: 'leaf' },
+  { name: 'Shounen', slug: 'shounen', icon: 'flame' },
+  { name: 'Seinen', slug: 'seinen', icon: 'swords' },
+  { name: 'Josei', slug: 'josei', icon: 'sprout' },
+  { name: 'Shoujo', slug: 'shoujo', icon: 'sprout' },
+  { name: 'Manhwa', slug: 'manhwa', icon: 'flag:KR' },
+  { name: 'Manhua', slug: 'manhua', icon: 'flag:CN' },
+  { name: 'Isekai', slug: 'isekai', icon: 'loader' },
+  { name: 'Martial Arts', slug: 'martial-arts', icon: 'target' },
+  { name: 'Supernatural', slug: 'supernatural', icon: 'eye' },
+  { name: 'Psychological', slug: 'psychological', icon: 'zap' },
 ];
 
 /* ─────────────────────────────────────────────────────
@@ -225,7 +283,7 @@ function buildCard(m, opts = {}) {
         onload="this.parentElement.classList.add('loaded')"
         onerror="this.onerror=null;this.parentElement.classList.add('noimg','loaded');this.remove()">
       ${rank}${typeLabel}${score}
-      <div class="kc-ov"><div class="kc-play">▶</div></div>
+      <div class="kc-ov"><div class="kc-play">${ic('play')}</div></div>
     </div>
     <div class="kc-body">
       <div class="kc-title">${safeTitle || 'Tanpa Judul'}</div>
@@ -272,7 +330,7 @@ function renderCards(gridId, items, { emptyMsg = 'Tidak ada komik' } = {}) {
   g.innerHTML = '';
   if (!items || !items.length) {
     g.innerHTML = `<div class="empty-box" style="padding:3rem;grid-column:1/-1">
-      <div class="ei">😕</div><div class="et">${esc(emptyMsg)}</div></div>`;
+      <div class="ei">${ic('frown')}</div><div class="et">${esc(emptyMsg)}</div></div>`;
     return;
   }
   items.forEach(m => g.appendChild(buildCard(m)));
@@ -401,7 +459,7 @@ function initSlider(items) {
           <h2 class="feat-title">${esc(m.title || '')}</h2>
           ${m.synopsis ? `<p class="feat-syn">${esc(m.synopsis)}</p>` : ''}
           <div class="feat-btns">
-            <button class="btn-primary" data-open="${esc(m.slug)}">📖 Baca Sekarang</button>
+            <button class="btn-primary" data-open="${esc(m.slug)}">${ic('book')} Baca Sekarang</button>
           </div>
         </div>
       </div>
@@ -773,7 +831,7 @@ function renderReadStats() {
   set('st-today', today);
   set('st-week', week);
   set('st-total', total >= 1000 ? (total / 1000).toFixed(1) + 'k' : total);
-  set('st-streak', (streak > 0 ? '🔥 ' : '') + streak);
+  set('st-streak', streak);
 }
 
 function renderHistory() {
@@ -810,7 +868,7 @@ function renderLibrary() {
   
   if (!list.length) {
     grid.innerHTML = `<div class="empty-box" style="grid-column: 1 / -1; padding: 4rem 1rem;">
-      <div class="ei">🔖</div>
+      <div class="ei">${ic('bookmark')}</div>
       <div class="et">Library Kosong</div>
       <div class="es">Anda belum menyimpan komik apa pun. Klik "Simpan Favorit" pada komik untuk membacanya nanti.</div>
     </div>`;
@@ -966,7 +1024,7 @@ async function buildGenreTiles() {
   if (d?.genres?.length) list = d.genres;
   else list = GENRES_DEFAULT; // offline fallback
 
-  const iconFor = name => (GENRES_DEFAULT.find(g => g.name.toLowerCase() === name.toLowerCase()) || {}).icon || '📚';
+  const iconFor = name => ic((GENRES_DEFAULT.find(g => g.name.toLowerCase() === name.toLowerCase()) || {}).icon || 'library');
 
   grid.innerHTML = list.map(g => `
     <div class="genre-tile" data-gslug="${esc(g.slug)}" data-gname="${esc(g.name)}">
@@ -1013,9 +1071,9 @@ async function openDetail(slug) {
   const d = await api(`${PROXY}/api/manga/${encodeURIComponent(slug)}`);
   if (!d || !d.title) {
     root.innerHTML = `<div class="empty-box" style="padding:5rem">
-      <div class="ei">😢</div><div class="et">Gagal memuat komik</div>
+      <div class="ei">${ic('frown')}</div><div class="et">Gagal memuat komik</div>
       <div class="es">Sumber data mungkin sibuk. Silakan coba lagi.</div>
-      <button class="btn-primary" style="margin-top:1rem" onclick="openDetail('${esc(slug)}')">🔄 Coba Lagi</button>
+      <button class="btn-primary" style="margin-top:1rem" onclick="openDetail('${esc(slug)}')">${ic('refresh')} Coba Lagi</button>
       <button class="btn-primary" style="margin-top:1rem;background:transparent;color:inherit" onclick="goBack()">← Kembali</button>
     </div>`;
     return;
@@ -1050,8 +1108,8 @@ async function openDetail(slug) {
           <div class="d-btns">
             <button class="btn-primary" id="d-read-btn"></button>
             <button class="btn-ghost" id="d-latest-btn">Baca Chapter Terbaru</button>
-            <button class="btn-ghost" id="d-bm-btn" style="padding: 0 10px; font-size: 1.1rem;" title="Simpan ke Library">🔖</button>
-            <button class="btn-ghost" id="d-share-btn" style="padding: 0 10px; font-size: 1.1rem;" title="Bagikan komik ini">📤</button>
+            <button class="btn-ghost" id="d-bm-btn" style="padding: 0 10px; font-size: 1.1rem;" title="Simpan ke Library">${ic('bookmark')}</button>
+            <button class="btn-ghost" id="d-share-btn" style="padding: 0 10px; font-size: 1.1rem;" title="Bagikan komik ini">${ic('upload')}</button>
           </div>
         </div>
       </div>
@@ -1081,7 +1139,7 @@ async function openDetail(slug) {
 
     <!-- Chapter list -->
     <div class="ch-section" id="ch-section">
-      <h3><span>📚 Daftar Chapter</span></h3>
+      <h3><span>${ic('library')} Daftar Chapter</span></h3>
       <div class="ch-list" id="ch-list">
         ${buildChapterList(d.chapters || [], { slug, title: d.title, img: d.img })}
       </div>
@@ -1092,7 +1150,7 @@ async function openDetail(slug) {
 
     <!-- Komik mirip -->
     <div class="ch-section" id="similar-section">
-      <h3><span>📚 Komik Mirip</span></h3>
+      <h3><span>${ic('library')} Komik Mirip</span></h3>
       <div class="card-grid" id="similar-grid"></div>
     </div>`;
 
@@ -1114,7 +1172,7 @@ async function openDetail(slug) {
     } else {
       try {
         await navigator.clipboard.writeText(location.href);
-        showToast('🔗 Link disalin! Bagikan ke temanmu', 2500);
+        showToast('Link disalin! Bagikan ke temanmu', 2500);
       } catch { showToast('Gagal menyalin link', 2000); }
     }
   };
@@ -1123,19 +1181,19 @@ async function openDetail(slug) {
   const getBms = () => { try { return JSON.parse(localStorage.getItem('kz_bookmarks')) || []; } catch { return []; } };
   const bms = getBms();
   let isBm = bms.some(b => b.slug === slug);
-  bmBtn.textContent = isBm ? '✅ Tersimpan' : '🔖 Simpan Favorit';
+  bmBtn.innerHTML = isBm ? ic('check') + ' Tersimpan' : ic('bookmark') + ' Simpan Favorit';
   if (isBm) bmBtn.classList.add('active-bm');
 
   bmBtn.onclick = () => {
     let list = getBms();
     if (isBm) {
       list = list.filter(b => b.slug !== slug);
-      bmBtn.textContent = '🔖 Simpan Favorit';
+      bmBtn.innerHTML = ic('bookmark') + ' Simpan Favorit';
       bmBtn.classList.remove('active-bm');
       showToast('Dihapus dari Library', 2000);
     } else {
       list.unshift({ slug, title: d.title, img: d.img, score: d.score, type: d.type, totalCh: (d.chapters || []).length });
-      bmBtn.textContent = '✅ Tersimpan';
+      bmBtn.innerHTML = ic('check') + ' Tersimpan';
       bmBtn.classList.add('active-bm');
       showToast('Disimpan ke Library', 2000);
     }
@@ -1155,11 +1213,11 @@ async function openDetail(slug) {
       // Chapter terakhir selesai dibaca (sampai bawah) & masih ada yang lebih
       // baru → lanjut ke chapter berikutnya; kalau berhenti di tengah, buka lagi chapter itu
       const target = (hist.done && hIdx > 0) ? hIdx - 1 : hIdx;
-      readBtn.textContent = `▶ Lanjut Baca ${chaptersArr[target].title || 'Chapter'}`;
+      readBtn.innerHTML = ic('play') + ` Lanjut Baca ${chaptersArr[target].title || 'Chapter'}`;
       readBtn.onclick = () => openReader(chaptersArr[target].slug, d.title);
     } else {
       // Daftar chapter terbaru-dulu: chapter awal ada di index terakhir
-      readBtn.textContent = '📖 Baca Chapter Awal';
+      readBtn.innerHTML = ic('book') + ' Baca Chapter Awal';
       readBtn.onclick = () => openReader(chaptersArr[chaptersArr.length - 1].slug, d.title);
     }
     latestBtn.onclick = () => openReader(chaptersArr[0].slug, d.title);
@@ -1222,7 +1280,7 @@ async function deepenDetailChapters(slug, d) {
     if (readBtn && (readBtn.disabled || (readBtn.textContent || '').includes('Baca Chapter Awal'))) {
       readBtn.disabled = false;
       readBtn.style.opacity = '';
-      readBtn.textContent = '📖 Baca Chapter Awal';
+      readBtn.innerHTML = ic('book') + ' Baca Chapter Awal';
       readBtn.onclick = () => openReader(_curChapters[_curChapters.length - 1].slug, d.title);
     }
     if (latestBtn) {
@@ -1276,7 +1334,7 @@ const adBlock = (n = 1) => `<div class="ad-block">${Array(n).fill(
 // Build chapter list with range tabs (Ch 1–50, 51–100, etc.)
 // Server returns newest first, so we reverse to show Ch 1 at top
 function buildChapterList(chapters, manga) {
-  if (!chapters.length) return `<div class="ch-empty">📭 Belum ada chapter tersedia.</div>`;
+  if (!chapters.length) return `<div class="ch-empty">${ic('inbox')} Belum ada chapter tersedia.</div>`;
 
   const key = ((manga && manga.slug) || '_cur').replace(/[^a-z0-9-]/gi, '');
   const sorted = [...chapters].reverse(); // oldest → newest
@@ -1286,8 +1344,8 @@ function buildChapterList(chapters, manga) {
       <span class="ch-num">${esc(c.title || 'Chapter')}</span>
       <span class="ch-title-txt"></span>
       <span class="ch-date">${esc(c.date || '')}</span>
-      <button class="ch-dl-btn" data-dl="${esc(c.slug)}" title="Download untuk dibaca offline">⬇️</button>
-      <button class="ch-read-btn">📖 Baca</button>
+      <button class="ch-dl-btn" data-dl="${esc(c.slug)}" title="Download untuk dibaca offline">${ic('download')}</button>
+      <button class="ch-read-btn">${ic('book')} Baca</button>
     </div>`;
 
   const RANGE = 50;
@@ -1439,11 +1497,11 @@ async function openReader(chSlug, title, opts = {}) {
 
   if (!imgs.length) {
     pages.innerHTML = `<div class="reader-error">
-      <span class="ei">😢</span>
+      <span class="ei">${ic('frown')}</span>
       <h3>Gambar tidak tersedia</h3>
       <p>Chapter ini belum bisa dimuat. Coba lagi atau pilih chapter lain.</p>
       <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap">
-        <button class="btn-primary" onclick="openReader('${esc(chSlug)}','${esc(title || _curTitle || '')}')">🔄 Coba Lagi</button>
+        <button class="btn-primary" onclick="openReader('${esc(chSlug)}','${esc(title || _curTitle || '')}')">${ic('refresh')} Coba Lagi</button>
         <button class="btn-primary" style="background:transparent;color:inherit" onclick="navigate('detail')">← Kembali ke Detail</button>
       </div>
     </div>`;
@@ -1461,7 +1519,7 @@ async function openReader(chSlug, title, opts = {}) {
   pages.innerHTML = pagesHtml;
   applyBrightness();
   if (isOffline) {
-    $('r-title').textContent += ' 📥';
+    $('r-title').insertAdjacentHTML('beforeend', ' ' + ic('download'));
     $('r-title').title = 'Dibaca dari penyimpanan offline';
   }
 
@@ -1477,7 +1535,7 @@ async function openReader(chSlug, title, opts = {}) {
     img.addEventListener('load', () => { loaded++; img.classList.add('loaded'); });
     img.addEventListener('error', () => {
       img.remove();
-      pageEl.innerHTML = `<div class="r-page-err" data-retry="${esc(img.src)}">⚠️ Gagal memuat halaman ini. <span class="r-retry" role="button">Coba lagi</span></div>`;
+      pageEl.innerHTML = `<div class="r-page-err" data-retry="${esc(img.src)}">${ic('alert')} Gagal memuat halaman ini. <span class="r-retry" role="button">Coba lagi</span></div>`;
     });
   });
 
@@ -1557,7 +1615,7 @@ $('r-reload').addEventListener('click', () => {
   pages.forEach((p, i) => {
     if (p.getBoundingClientRect().top <= 90) idx = i; // 90px = di bawah toolbar
   });
-  showToast('🔄 Memuat ulang chapter...', 1500);
+  showToast('Memuat ulang chapter...', 1500);
   openReader(slug, _curTitle, { isReload: true, keepPageIdx: pages.length ? idx : null });
 });
 $('rs-dl')?.addEventListener('click', () => {
@@ -1604,7 +1662,7 @@ function syncSaverToggle() {
 $('saver-toggle')?.addEventListener('change', e => {
   _saver = e.target.checked;
   try { localStorage.setItem('kz_saver', _saver ? '1' : '0'); } catch {}
-  showToast(_saver ? '📶 Mode hemat data AKTIF — gambar dimuat versi ringan' : '📶 Mode hemat data mati — kualitas penuh', 2200);
+  showToast(_saver ? 'Mode hemat data AKTIF — gambar dimuat versi ringan' : 'Mode hemat data mati — kualitas penuh', 2200);
 });
 syncSaverToggle();
 document.addEventListener('click', e => {
@@ -1627,9 +1685,9 @@ function renderChListPop(filter = '') {
   const items = _curChapters.filter(c => !q || (c.title || '').toLowerCase().includes(q));
   wrap.innerHTML = items.map(c => `
     <div class="chlist-item${c.slug === curSlug ? ' active' : ''}" data-ch="${esc(c.slug)}">
-      <span>${esc(c.title || 'Chapter')}${c.slug === curSlug ? ' 👈' : ''}</span>
+      <span>${esc(c.title || 'Chapter')}${c.slug === curSlug ? ' ' + ic('arrowleft') : ''}</span>
       <span class="chlist-date">${esc(c.date || '')}</span>
-    </div>`).join('') || `<div class="notif-empty">Tidak ketemu 😅</div>`;
+    </div>`).join('') || `<div class="notif-empty">Tidak ketemu</div>`;
   // scroll ke chapter aktif
   const act = wrap.querySelector('.chlist-item.active');
   if (act && !q) act.scrollIntoView({ block: 'center' });
@@ -1684,7 +1742,7 @@ function setupAutoNext() {
       _autoNextTimer = setTimeout(() => {
         _autoNextTimer = null;
         if (!_autoNext) return;
-        showToast('⏭️ Lanjut ke chapter berikutnya...', 1500);
+        showToast('Lanjut ke chapter berikutnya...', 1500);
         goReaderChapter(-1);
       }, 1500);
     } else if (!entries[0].isIntersecting && _autoNextTimer) {
@@ -1697,7 +1755,7 @@ $('autonext-toggle')?.addEventListener('change', e => {
   _autoNext = e.target.checked;
   try { localStorage.setItem('kz_autonext', _autoNext ? '1' : '0'); } catch {}
   setupAutoNext();
-  showToast(_autoNext ? '⏭️ Auto-lanjut AKTIF' : '⏭️ Auto-lanjut mati', 1800);
+  showToast(_autoNext ? 'Auto-lanjut AKTIF' : 'Auto-lanjut mati', 1800);
 });
 syncSaverToggle();
 updateAutoNextBtn();
@@ -1710,7 +1768,7 @@ $('reader-pages').addEventListener('click', e => {
   errBox.innerHTML = `<img src="${esc(src)}" alt="Halaman">`;
   const img = errBox.querySelector('img');
   img.addEventListener('error', () => {
-    errBox.innerHTML = `<div class="r-page-err" data-retry="${esc(src)}">⚠️ Gagal memuat halaman ini. <span class="r-retry" role="button">Coba lagi</span></div>`;
+    errBox.innerHTML = `<div class="r-page-err" data-retry="${esc(src)}">${ic('alert')} Gagal memuat halaman ini. <span class="r-retry" role="button">Coba lagi</span></div>`;
   });
 });
 
@@ -1845,7 +1903,7 @@ async function doSearch(q) {
         <div class="sd-name">${esc(m.title)}</div>
         <div class="sd-sub">${esc(m.type || '')}</div>
       </div>
-      ${m.score ? `<div class="sd-sc">⭐ ${esc(m.score)}</div>` : ''}
+      ${m.score ? `<div class="sd-sc">${ic('star')} ${esc(m.score)}</div>` : ''}
     </div>`).join('');
 
   dd.querySelectorAll('.sd-row').forEach(row => row.addEventListener('click', () => {
@@ -1897,7 +1955,7 @@ const PAGE_CONTENT = {
 </ul>
 <p><b>Email:</b> <a href="mailto:dknimelol@gmail.com">dknimelol@gmail.com</a></p>
 <p>Tim kami akan berusaha merespons setiap pesan dalam waktu <b>2×24 jam</b> pada hari kerja. Untuk laporan bug, mohon sertakan judul komik, nama chapter, serta jenis perangkat dan browser yang Anda gunakan.</p>
-<p>Terima kasih telah menjadi bagian dari KomikZone. Dukungan Anda membuat situs ini terus berkembang. ☕</p>`
+<p>Terima kasih telah menjadi bagian dari KomikZone. Dukungan Anda membuat situs ini terus berkembang. ${ic('coffee')}</p>`
   }
 };
 
@@ -2135,11 +2193,11 @@ const _dlBusy = new Set();
 async function downloadChapter(manga, ch, btn) {
   if (!manga || !ch?.slug) return;
   if (_dlBusy.has(ch.slug)) return;
-  if (await DL.isDownloaded(ch.slug)) { showToast('Chapter ini sudah tersimpan offline ✅', 2000); return; }
+  if (await DL.isDownloaded(ch.slug)) { showToast('Chapter ini sudah tersimpan offline', 2000); return; }
   _dlBusy.add(ch.slug);
   const setBtn = (html, cls) => { if (btn) { btn.innerHTML = html; btn.className = 'ch-dl-btn ' + (cls || ''); } };
   try {
-    setBtn('⏳ 0%', 'busy');
+    setBtn(ic('loader', 'spin') + ' 0%', 'busy');
     const d = await api(`${PROXY}/api/chapter?slug=${encodeURIComponent(ch.slug)}`, 60000);
     const imgs = d?.images || [];
     if (!imgs.length) throw new Error('gambar tidak ditemukan');
@@ -2151,7 +2209,7 @@ async function downloadChapter(manga, ch, btn) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const b = await r.blob();
       size += b.size; done++;
-      setBtn(`⏳ ${Math.round(done / imgs.length * 100)}%`, 'busy');
+      setBtn(`${ic('loader', 'spin')} ${Math.round(done / imgs.length * 100)}%`, 'busy');
       return b;
     };
     for (let i = 0; i < imgs.length; i += 3) {
@@ -2164,13 +2222,13 @@ async function downloadChapter(manga, ch, btn) {
       pageCount: blobs.length, size,
       downloadedAt: Date.now()
     }, blobs);
-    setBtn('✅', 'done');
-    showToast(`✅ ${ch.title || 'Chapter'} tersimpan — bisa dibaca offline`, 2500);
+    setBtn(ic('check'), 'done');
+    showToast(`${ch.title || 'Chapter'} tersimpan — bisa dibaca offline`, 2500);
     updateOffCount();
   } catch (e) {
     console.warn('download err:', e.message);
-    setBtn('⬇️', '');
-    showToast('❌ Download gagal: ' + e.message, 3000);
+    setBtn(ic('download'), '');
+    showToast('Download gagal: ' + e.message, 3000);
   } finally {
     _dlBusy.delete(ch.slug);
   }
@@ -2191,13 +2249,13 @@ document.addEventListener('click', async e => {
   downloadChapter(manga, { slug: chSlug, title: chTitle }, btn);
 }, true);
 
-// Tandai tombol ⬇️→✅ untuk chapter yang sudah didownload (dipanggil setelah chapter list dirender)
+// Tandai tombol download→check untuk chapter yang sudah didownload (dipanggil setelah chapter list dirender)
 async function markDownloadedButtons() {
   const btns = document.querySelectorAll('[data-dl]');
   if (!btns.length) return;
   for (const b of btns) {
     if (b.classList.contains('done') || _dlBusy.has(b.dataset.dl)) continue;
-    if (await DL.isDownloaded(b.dataset.dl)) { b.innerHTML = '✅'; b.classList.add('done'); }
+    if (await DL.isDownloaded(b.dataset.dl)) { b.innerHTML = ic('check'); b.classList.add('done'); }
   }
 }
 
@@ -2214,7 +2272,7 @@ async function renderOffline() {
   if (!list) return;
   const metas = (await DL.list()).sort((a, b) => b.downloadedAt - a.downloadedAt);
   if (!metas.length) {
-    list.innerHTML = `<div class="empty-box" style="padding:3rem 1rem"><div class="ei">📥</div><div class="et">Belum ada download</div><div class="es">Buka komik → daftar chapter → tekan ⬇️ untuk simpan dan baca offline.</div></div>`;
+    list.innerHTML = `<div class="empty-box" style="padding:3rem 1rem"><div class="ei">${ic('download')}</div><div class="et">Belum ada download</div><div class="es">Buka komik → daftar chapter → tekan ikon unduh untuk simpan dan baca offline.</div></div>`;
   } else {
     list.innerHTML = metas.map(m => `
       <div class="off-item" data-ch="${esc(m.chapterSlug)}" data-title="${esc(m.mangaTitle)}">
@@ -2223,11 +2281,11 @@ async function renderOffline() {
           <div class="oi-title">${esc(m.mangaTitle)}</div>
           <div class="oi-sub">${esc(m.chapterTitle)} • ${m.pageCount} hlm • ${fmtSize(m.size)}</div>
         </div>
-        <button class="off-del" data-del="${esc(m.chapterSlug)}" title="Hapus download">🗑</button>
+        <button class="off-del" data-del="${esc(m.chapterSlug)}" title="Hapus download">${ic('trash')}</button>
       </div>`).join('');
   }
   const size = metas.reduce((a, m) => a + (m.size || 0), 0);
-  $('off-size').textContent = `📦 ${metas.length} chapter • ${fmtSize(size)} tersimpan di perangkat ini`;
+  $('off-size').innerHTML = ic('package') + ` ${metas.length} chapter • ${fmtSize(size)} tersimpan di perangkat ini`;
 }
 
 $$('#lib-tabs .lib-tab').forEach(t => t.addEventListener('click', () => {
@@ -2284,7 +2342,7 @@ function renderNotifList() {
   if (!list) return;
   if (!notifUpdates.length) {
     const bms = getBmsGlobal();
-    list.innerHTML = `<div class="notif-empty">${bms.length ? '🎉 Semua update sudah dibaca!' : '🔖 Bookmark komik favoritmu,<br>notifikasi update akan muncul di sini.'}</div>`;
+    list.innerHTML = `<div class="notif-empty">${bms.length ? ic('sparkles') + ' Semua update sudah dibaca!' : ic('bookmark') + ' Bookmark komik favoritmu,<br>notifikasi update akan muncul di sini.'}</div>`;
     return;
   }
   list.innerHTML = notifUpdates.map(u => `
@@ -2292,7 +2350,7 @@ function renderNotifList() {
       <img src="${esc(u.img)}" alt="" loading="lazy" onerror="this.style.display='none'">
       <div class="ni-body">
         <div class="ni-title">${esc(u.title)}</div>
-        <div class="ni-ch">📖 ${esc(u.chTitle)} baru!</div>
+        <div class="ni-ch">${ic('book')} ${esc(u.chTitle)} baru!</div>
         <div class="ni-time">${esc(u.date || '')}</div>
       </div>
     </div>`).join('');
@@ -2425,7 +2483,7 @@ if (btnInstall) {
       // Show iOS instruction
       const textDiv = pwaPrompt.querySelector('.pwa-text');
       if (textDiv) {
-        textDiv.innerHTML = '<h4>Cara Install di iOS</h4><p>Tekan <b>Share</b> 📤 lalu pilih <b>"Add to Home Screen"</b> ➕</p>';
+        textDiv.innerHTML = '<h4>Cara Install di iOS</h4><p>Tekan <b>Share</b> ' + ic('upload') + ' lalu pilih <b>"Add to Home Screen"</b> ' + ic('plus') + '</p>';
       }
       btnInstall.style.display = 'none';
       btnCancel.textContent = 'Tutup';

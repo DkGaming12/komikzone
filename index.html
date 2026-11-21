@@ -58,7 +58,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="/style.css?v=20261121sg" />
+  <link rel="stylesheet" href="/style.css?v=20261121icons" />
 </head>
 
 <body class="no-select no-drag">
@@ -107,7 +107,7 @@
           </button>
           <div class="notif-drop" id="notif-drop">
             <div class="notif-head">
-              <strong>🔔 Update Komik</strong>
+              <strong><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg> Update Komik</strong>
               <button id="notif-clear">Tandai dibaca</button>
             </div>
             <div class="notif-list" id="notif-list"></div>
@@ -124,7 +124,7 @@
       <a class="ntab active" data-nav="home">Home</a>
       <a class="ntab" data-nav="explore">Explore</a>
       <a class="ntab" data-nav="top">Top Komik</a>
-      <a class="ntab" data-nav="schedule">📅 Jadwal</a>
+      <a class="ntab" data-nav="schedule"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Jadwal</a>
       <a class="ntab" data-nav="genre">Genre</a>
       <a class="ntab" data-nav="allseries">All Series</a>
       <a class="ntab" data-nav="library">Library</a>
@@ -133,13 +133,13 @@
 
   <!-- mobile menu -->
   <nav class="mmenu" id="mmenu">
-    <a class="mlink active" data-nav="home">🏠 Home</a>
-    <a class="mlink" data-nav="explore">🔍 Explore</a>
-    <a class="mlink" data-nav="top">🏆 Top Komik</a>
-    <a class="mlink" data-nav="schedule">📅 Jadwal Update</a>
-    <a class="mlink" data-nav="genre">🎭 Genre</a>
-    <a class="mlink" data-nav="allseries">📚 All Series</a>
-    <a class="mlink" data-nav="library">🔖 Library Favorit</a>
+    <a class="mlink active" data-nav="home"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg> Home</a>
+    <a class="mlink" data-nav="explore"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> Explore</a>
+    <a class="mlink" data-nav="top"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> Top Komik</a>
+    <a class="mlink" data-nav="schedule"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Jadwal Update</a>
+    <a class="mlink" data-nav="genre"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> Genre</a>
+    <a class="mlink" data-nav="allseries"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></svg> All Series</a>
+    <a class="mlink" data-nav="library"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Library Favorit</a>
     <div class="mmenu-online">
       <span class="online-dot"></span>
       <span class="mmenu-online-count" id="mmenu-online-count">—</span>
@@ -150,8 +150,8 @@
   <!-- notice bar -->
   <div class="notice-bar" id="notice-bar">
     <span class="notice-label">Notice</span>
-    <span class="notice-text">Database komik terlengkap · Update tiap hari · Gratis tanpa login! 🇮🇩</span>
-    <button class="notice-close" id="notice-close">✕</button>
+    <span class="notice-text">Database komik terlengkap · Update tiap hari · Gratis tanpa login!</span>
+    <button class="notice-close" id="notice-close"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
   </div>
 
   <!-- ========== MAIN ========== -->
@@ -182,7 +182,7 @@
           <!-- Terakhir Dibaca -->
           <section class="home-blk" id="history-blk" style="display:none">
             <div class="blk-head">
-              <h2 class="blk-title">🕐 Terakhir Dibaca</h2>
+              <h2 class="blk-title"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Terakhir Dibaca</h2>
               <button class="blk-more" id="clear-history" style="color:var(--txt3);font-size:.72rem">Hapus Semua</button>
             </div>
             <div class="history-row" id="history-row"><!-- JS --></div>
@@ -191,7 +191,7 @@
           <!-- Rekomendasi (4-card slider with type filter) -->
           <section class="home-blk" id="reko-blk">
             <div class="blk-head">
-              <h2 class="blk-title">⭐ Rekomendasi</h2>
+              <h2 class="blk-title"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 5.87 6.48.94-4.69 4.57 1.11 6.45L12 17.37l-5.8 3.05 1.11-6.45L2.62 9.4l6.48-.94z" fill="currentColor" stroke="none"/></svg> Rekomendasi</h2>
             </div>
             <div class="reko-filter">
               <button class="filt active" data-reko="all">Semua</button>
@@ -229,7 +229,7 @@
           <!-- Popular / Hot -->
           <section class="home-blk">
             <div class="blk-head">
-              <h2 class="blk-title">🔥 Komik Populer</h2>
+              <h2 class="blk-title"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg> Komik Populer</h2>
               <a class="blk-more" data-nav="top" href="#">Semua</a>
             </div>
             <div class="card-grid" id="pop-grid">
@@ -252,7 +252,7 @@
           <!-- Manhwa Webtoon -->
           <section class="home-blk">
             <div class="blk-head">
-              <h2 class="blk-title">📱 Manhwa / Webtoon</h2>
+              <h2 class="blk-title"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 18h.01"/></svg> Manhwa / Webtoon</h2>
               <a class="blk-more" data-nav="genre" href="#">Lihat Genre</a>
             </div>
             <div class="card-grid" id="manhwa-grid">
@@ -275,7 +275,7 @@
           <!-- Manhua -->
           <section class="home-blk">
             <div class="blk-head">
-              <h2 class="blk-title">🐉 Manhua / Donghua</h2>
+              <h2 class="blk-title"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></svg> Manhua / Donghua</h2>
               <a class="blk-more" data-nav="allseries" href="#">Lihat Semua</a>
             </div>
             <div class="card-grid" id="manhua-grid">
@@ -301,7 +301,7 @@
         <!-- Sidebar kanan (like komikkita) -->
         <aside class="home-side">
           <section class="side-widget">
-            <h3 class="sw-head">🔥 Popular Series</h3>
+            <h3 class="sw-head"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg> Popular Series</h3>
             <div class="wpop-tabs" id="wpop-tabs">
               <button class="wtab active" data-range="weekly">Mingguan</button>
               <button class="wtab" data-range="daily">Hari Ini</button>
@@ -314,7 +314,7 @@
           </section>
 
           <section class="side-widget">
-            <h3 class="sw-head">🆕 Series Baru</h3>
+            <h3 class="sw-head"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.94 15.5a2 2 0 0 0-1.44-1.44L2.37 12.5a.5.5 0 0 1 0-.98l6.13-1.56A2 2 0 0 0 9.94 8.5l1.56-6.13a.5.5 0 0 1 .98 0l1.56 6.13a2 2 0 0 0 1.44 1.44l6.13 1.56a.5.5 0 0 1 0 .98l-6.13 1.56a2 2 0 0 0-1.44 1.44l-1.56 6.13a.5.5 0 0 1-.98 0z"/></svg> Series Baru</h3>
             <div class="ns-list" id="ns-list">
               <div class="sw-skel"></div><div class="sw-skel"></div><div class="sw-skel"></div>
             </div>
@@ -326,7 +326,7 @@
           </div>
 
           <section class="side-widget">
-            <h3 class="sw-head">🎭 Genre</h3>
+            <h3 class="sw-head"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> Genre</h3>
             <div class="side-genres" id="side-genres"></div>
           </section>
 
@@ -341,7 +341,7 @@
     <!-- EXPLORE -->
     <div id="pg-explore" class="pg">
       <div class="pg-header">
-        <h1>🔍 Explore Komik</h1>
+        <h1><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> Explore Komik</h1>
         <p>Jelajahi semua manga, manhwa, dan manhua bahasa Indonesia dari database KomikZone</p>
         <div class="filt-row">
           <button class="filt active" data-t="">Semua</button>
@@ -351,8 +351,8 @@
         </div>
         <div class="filt-row">
           <button class="filt sfilt active" data-s="">Semua Status</button>
-          <button class="filt sfilt" data-s="ongoing">🔄 Ongoing</button>
-          <button class="filt sfilt" data-s="completed">✅ Tamat</button>
+          <button class="filt sfilt" data-s="ongoing"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg> Ongoing</button>
+          <button class="filt sfilt" data-s="completed"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg> Tamat</button>
         </div>
         <div class="sort-row">
           <span>Urutkan:</span>
@@ -375,7 +375,7 @@
     <!-- TOP -->
     <div id="pg-top" class="pg">
       <div class="pg-header">
-        <h1>🏆 Top Komik</h1>
+        <h1><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> Top Komik</h1>
         <p>Komik terpopuler di KomikZone, bahasa Indonesia lengkap!</p>
         <div class="filt-row">
           <button class="filt active" data-t="all">Semua</button>
@@ -396,7 +396,7 @@
     <!-- JADWAL UPDATE -->
     <div id="pg-schedule" class="pg">
       <div class="pg-header">
-        <h1>📅 Jadwal Update</h1>
+        <h1><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Jadwal Update</h1>
         <p>Komik yang update tiap hari, dikelompokkan berdasarkan hari rilis (WIB).</p>
         <div class="filt-row" id="sch-days">
           <button class="filt" data-d="1">Senin</button>
@@ -419,7 +419,7 @@
     <!-- LIBRARY (BOOKMARKS) -->
     <div id="pg-library" class="pg">
       <div class="pg-header">
-        <h1>🔖 Library</h1>
+        <h1><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Library</h1>
         <p>Koleksi komik yang Anda simpan & download untuk dibaca offline.</p>
       </div>
       <div class="stats-card" id="stats-card">
@@ -429,8 +429,8 @@
         <div class="stat-box"><div class="stat-num" id="st-streak">0</div><div class="stat-lbl">Streak harian</div></div>
       </div>
       <div class="lib-tabs" id="lib-tabs">
-        <button class="lib-tab active" data-ltab="fav">🔖 Favorit</button>
-        <button class="lib-tab" data-ltab="offline">📥 Offline <span id="lib-off-count"></span></button>
+        <button class="lib-tab active" data-ltab="fav"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Favorit</button>
+        <button class="lib-tab" data-ltab="offline"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg> Offline <span id="lib-off-count"></span></button>
       </div>
       <div class="card-grid wide" id="library-grid">
         <!-- Bookmark cards rendered here -->
@@ -438,7 +438,7 @@
       <div id="offline-panel" class="hidden">
         <div class="off-bar">
           <span id="off-size">Menghitung...</span>
-          <button class="btn-danger-sm" id="off-clear-all">🗑 Hapus semua</button>
+          <button class="btn-danger-sm" id="off-clear-all"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Hapus semua</button>
         </div>
         <div id="offline-list"></div>
       </div>
@@ -447,7 +447,7 @@
     <!-- GENRE -->
     <div id="pg-genre" class="pg">
       <div class="pg-header">
-        <h1>🎭 Genre Komik</h1>
+        <h1><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg> Genre Komik</h1>
         <p>Pilih genre favorit kamu</p>
       </div>
       <div class="genre-grid" id="genre-grid"></div>
@@ -476,7 +476,7 @@
     <!-- ALL SERIES -->
     <div id="pg-allseries" class="pg">
       <div class="pg-header">
-        <h1>📚 All Series</h1>
+        <h1><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></svg> All Series</h1>
         <p>Semua komik ada di database KomikZone, bahasa Indonesia!</p>
         <div class="filt-row">
           <button class="filt active" data-t="">Semua</button>
@@ -509,9 +509,9 @@
           <button class="r-btn" id="r-prev-ch" title="Chapter sebelumnya">‹ Ch</button>
           <span class="r-ch-info" id="r-ch-info"></span>
           <button class="r-btn" id="r-next-ch" title="Chapter berikutnya">Ch ›</button>
-          <button class="r-btn" id="r-reload" title="Muat ulang chapter">🔄</button>
-          <button class="r-btn" id="r-chlist" title="Daftar semua chapter">📋</button>
-          <button class="r-btn" id="r-settings" title="Pengaturan reader">⚙️</button>
+          <button class="r-btn" id="r-reload" title="Muat ulang chapter"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg></button>
+          <button class="r-btn" id="r-chlist" title="Daftar semua chapter"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg></button>
+          <button class="r-btn" id="r-settings" title="Pengaturan reader"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
       </div>
 
@@ -522,31 +522,31 @@
 
       <!-- Panel pengaturan reader -->
       <div class="reader-settings hidden" id="reader-settings-pop">
-        <div class="rs-title">⚙️ Pengaturan Reader</div>
+        <div class="rs-title"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg> Pengaturan Reader</div>
         <div class="rs-row">
-          <span class="rs-label">🔅</span>
+          <span class="rs-label"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></span>
           <input type="range" id="bright-slider" min="30" max="100" value="100" step="5">
           <span class="rs-val" id="bright-val">100%</span>
         </div>
         <label class="rs-toggle">
           <input type="checkbox" id="saver-toggle">
-          <span>📶 Mode hemat data <small>±70% lebih ringan</small></span>
+          <span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M12 20h.01"/></svg> Mode hemat data <small>±70% lebih ringan</small></span>
         </label>
         <label class="rs-toggle">
           <input type="checkbox" id="autonext-toggle">
-          <span>⏭️ Auto-lanjut chapter <small>otomatis buka berikutnya</small></span>
+          <span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 4 14 8-14 8z" fill="currentColor" stroke="none"/><path d="M20 5v14"/></svg> Auto-lanjut chapter <small>otomatis buka berikutnya</small></span>
         </label>
         <div class="rs-btns">
           <button class="r-btn" id="rs-fit">⇔ Lebar</button>
-          <button class="r-btn" id="rs-dl">⬇️ Download chapter</button>
+          <button class="r-btn" id="rs-dl"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg> Download chapter</button>
         </div>
       </div>
 
       <!-- Popup daftar chapter -->
       <div class="reader-settings chlist-pop hidden" id="chlist-pop">
-        <div class="rs-title">📋 Daftar Chapter</div>
+        <div class="rs-title"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg> Daftar Chapter</div>
         <div class="chlist-search">
-          <input id="chlist-q" type="text" placeholder="🔍 Cari chapter..." autocomplete="off">
+          <input id="chlist-q" type="text" placeholder="Cari chapter..." autocomplete="off">
         </div>
         <div class="chlist-items" id="chlist-items"></div>
       </div>
@@ -644,7 +644,7 @@
   <div class="popup-overlay" id="trakteer-popup">
     <div class="popup-box">
       <button class="popup-close" id="popup-close">Tutup (5)</button>
-      <div class="popup-icon">☕</div>
+      <div class="popup-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2M10 2v2M14 2v2"/></svg></div>
       <h3 class="popup-title">Dukung KomikZone!</h3>
       <p class="popup-desc">Suka baca komik di sini? Dukung kami dengan traktir kopi agar web ini terus update dan bebas
         iklan mengganggu!</p>
@@ -708,7 +708,7 @@
       });
     }
   </script>
-  <script src="/app.js?v=20261121gold"></script>
+  <script src="/app.js?v=20261121icons"></script>
 </body>
 
 </html>
