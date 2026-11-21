@@ -1329,7 +1329,7 @@ async function deepenDetailChapters(slug, d) {
     if (_curMangaSlug !== slug || !$('ch-list')) return;
     if (!nd?.chapters?.length) { if (++stale >= 2) return; continue; }
     const merged = new Map();
-    for (const c of nd.chapters) merged.set(c.slug, { slug: c.slug, title: c.title, date: c.date, rdate: c.rdate });
+    for (const c of nd.chapters) merged.set(c.slug, { slug: c.slug, title: c.title, date: c.date, rdate: c.rdate, thumb: c.thumb });
     for (const c of _curChapters) if (!merged.has(c.slug)) merged.set(c.slug, c);
     const arr = [...merged.values()].sort((a, b) => (numOf(b) ?? 0) - (numOf(a) ?? 0));
     if (arr.length <= _curChapters.length) { if (++stale >= 2) return; continue; }
@@ -1418,15 +1418,18 @@ function renderChItems() {
   if (!vis.length) return `<div class="ch-empty">${ic('inbox')} Chapter tidak ditemukan.</div>`;
   const img = (_chManga && _chManga.img) || '';
   const thumbErr = img ? `this.onerror=null;this.src='${esc(img)}'` : `this.style.visibility='hidden'`;
-  const item = (c) => `
+  const item = (c) => {
+    const src = c.thumb || `${PROXY}/api/chapter-thumb/${c.slug}`;
+    return `
     <div class="ch-item" data-ch="${esc(c.slug)}">
-      <img class="ch-thumb" src="${PROXY}/api/chapter-thumb/${esc(c.slug)}" alt="" loading="lazy" onerror="${thumbErr}">
+      <img class="ch-thumb" src="${esc(src)}" alt="" loading="lazy" onerror="${thumbErr}">
       <div class="ch-txt">
         <span class="ch-num">${esc(c.title || 'Chapter')}</span>
         <span class="ch-date">${c.rdate ? 'Rilis ' + esc(c.rdate) : esc(c.date || '')}</span>
       </div>
       <button class="ch-dl-btn" data-dl="${esc(c.slug)}" title="Download untuk dibaca offline">${ic('download')}</button>
     </div>`;
+  };
   return `<div class="ch-grid">${vis.map(item).join('')}</div>` +
     (total > vis.length ? `<button class="ch-more" id="ch-more">Muat lebih banyak <b>${vis.length} / ${total}</b></button>` : '');
 }

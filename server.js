@@ -230,14 +230,19 @@ function fmtRDate(iso) {
   return `${t.getDate()} ${MONTHS_ID[t.getMonth()]} ${t.getFullYear()}`;
 }
 
-/** Map a chapter-list entry: { title, slug, date, rdate } (newest-first preserved) */
+/** Map a chapter-list entry: { title, slug, date, rdate, thumb } (newest-first preserved).
+    thumb = Shinigami's own per-chapter preview (thumbnail_image_url);
+    the generic default.jpg placeholder is dropped so the client falls
+    back to the chapter's first page instead. */
 function mapChapter(c) {
   const raw = c.release_date || c.created_at;
+  const t = c.thumbnail_image_url || '';
   return {
     title: `Chapter ${c.chapter_number}`,
     slug: c.chapter_id,
     date: relTime(raw),
-    rdate: fmtRDate(raw)
+    rdate: fmtRDate(raw),
+    thumb: t && !t.endsWith('/default.jpg') ? t : ''
   };
 }
 
