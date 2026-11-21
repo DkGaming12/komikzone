@@ -4,8 +4,8 @@
   "description": "Baca Manga, Manhwa & Manhua Online Gratis",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a12",
-  "theme_color": "#7c3aed",
+  "background_color": "#060606",
+  "theme_color": "#060606",
   "orientation": "portrait-primary",
   "icons": [
     {

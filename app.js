@@ -1021,7 +1021,7 @@ async function openDetail(slug) {
     return;
   }
 
-  const scCol = '#a855f7';
+  const scCol = '#d4af37';
   const syn = d.synopsis || 'Sinopsis tidak tersedia.';
   const shortDesc = syn.length > 150 ? syn.substring(0, 147) + '...' : syn;
   setUrl(`/manga/${slug}`, d.title, shortDesc, d.img);
